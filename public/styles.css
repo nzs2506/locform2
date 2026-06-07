@@ -1,13 +1,14 @@
 :root {
   color-scheme: light;
-  --bg: #f7f7f4;
+  --bg: #f8f8f5;
   --panel: #ffffff;
   --text: #20231f;
-  --muted: #687066;
-  --line: #d9ddd4;
+  --muted: #666f64;
+  --line: #d7dcd2;
   --green: #07974d;
-  --green-dark: #026437;
+  --green-dark: #006739;
   --ink: #111411;
+  --soft: #eef5ef;
 }
 
 * {
@@ -22,15 +23,15 @@ body {
 }
 
 button {
+  min-height: 36px;
+  padding: 0 16px;
   border: 1px solid var(--line);
+  border-radius: 6px;
   background: #ffffff;
   color: var(--ink);
-  border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
   font-size: 14px;
-  min-height: 36px;
-  padding: 0 14px;
 }
 
 button:hover {
@@ -38,37 +39,42 @@ button:hover {
 }
 
 .shell {
+  display: grid;
+  gap: 14px;
   min-height: 100vh;
-  padding: 22px;
+  padding: 10px;
 }
 
-.workspace {
+.top-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(360px, 1.05fr);
-  gap: 18px;
-  max-width: 1440px;
-  margin: 0 auto;
+  grid-template-columns: minmax(360px, 1fr) minmax(430px, 1fr);
+  gap: 14px;
+  min-height: 600px;
 }
 
 .editor-pane,
 .results-pane,
-.preview-band > div {
+.preview-band {
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
 
-.editor-pane,
-.results-pane {
-  min-height: 650px;
+.editor-pane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  position: relative;
 }
 
-.pane-head,
-.result-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.results-pane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.pane-head {
+  display: grid;
+  gap: 10px;
   padding: 16px;
   border-bottom: 1px solid var(--line);
 }
@@ -81,10 +87,12 @@ h2 {
 
 h1 {
   font-size: 22px;
+  line-height: 1.2;
 }
 
 h2 {
   font-size: 16px;
+  line-height: 1.25;
 }
 
 .pane-head span {
@@ -95,37 +103,68 @@ h2 {
 }
 
 #convertBtn {
+  width: max-content;
   background: var(--green);
   border-color: var(--green);
   color: #ffffff;
   font-weight: 700;
 }
 
+.textarea-wrap {
+  position: relative;
+  min-height: 0;
+}
+
 textarea {
+  display: block;
   width: 100%;
+  height: 100%;
   border: 0;
-  resize: none;
   outline: none;
+  resize: none;
+  color: var(--ink);
   font-family: Consolas, "Courier New", monospace;
   font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink);
+  line-height: 1.48;
 }
 
 #sourceText {
-  display: block;
-  height: 536px;
-  padding: 16px;
+  padding: 18px 16px;
+}
+
+.drop-hint {
+  display: none;
+  position: absolute;
+  inset: 14px;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--green);
+  border-radius: 8px;
+  background: rgba(238, 245, 239, 0.92);
+  color: var(--green-dark);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.editor-pane.drag-over .drop-hint {
+  display: flex;
 }
 
 .options {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 18px;
+  min-height: 48px;
+  padding: 12px 16px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 13px;
+}
+
+.options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .tabs {
@@ -143,15 +182,22 @@ textarea {
 
 .result {
   display: none;
+  min-height: 0;
 }
 
 .result.active {
-  display: block;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.result textarea {
-  height: 541px;
+.result-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 98px;
   padding: 16px;
+  border-bottom: 1px solid var(--line);
 }
 
 .result-head button {
@@ -159,48 +205,41 @@ textarea {
   font-weight: 700;
 }
 
-.preview-band {
-  max-width: 1440px;
-  margin: 18px auto 0;
+.result textarea {
+  min-height: 0;
+  padding: 18px 16px;
+  overflow: auto;
 }
 
-.preview-band > div {
+.preview-band {
+  min-height: 260px;
   padding: 16px;
 }
 
 #preview {
-  min-height: 110px;
+  min-height: 210px;
   margin-top: 14px;
   padding: 14px;
+  overflow: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
-  overflow: auto;
   background: #ffffff;
-  white-space: break-spaces;
+  font-family: Arial, sans-serif;
+  white-space: normal;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 920px) {
   .shell {
-    padding: 12px;
+    padding: 8px;
   }
 
-  .workspace {
+  .top-grid {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .editor-pane,
   .results-pane {
-    min-height: auto;
-  }
-
-  #sourceText,
-  .result textarea {
-    height: 430px;
-  }
-
-  .pane-head,
-  .result-head {
-    align-items: flex-start;
-    flex-direction: column;
+    min-height: 540px;
   }
 }

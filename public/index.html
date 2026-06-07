@@ -8,8 +8,8 @@
 </head>
 <body>
   <main class="shell">
-    <section class="workspace">
-      <div class="editor-pane">
+    <section class="top-grid">
+      <div class="editor-pane" id="dropZone">
         <div class="pane-head">
           <div>
             <h1>LOCform 2.0</h1>
@@ -18,9 +18,10 @@
           <button id="convertBtn" type="button">Преобразовать</button>
         </div>
 
-        <textarea id="sourceText" spellcheck="false" placeholder="Вставьте текст CRM/промо. Поддерживаются строки вида:
-Кнопка зеленая: Играть (/promotions/example)
-Кнопка белая: Подробнее (https://example.com/path?x=1& utm_medium=crm)"></textarea>
+        <div class="textarea-wrap">
+          <textarea id="sourceText" spellcheck="false" placeholder="Вставьте текст CRM/промо или перетащите сюда .txt/.html файл"></textarea>
+          <div class="drop-hint">Отпустите текст или файл здесь</div>
+        </div>
 
         <div class="options">
           <label><input id="autoConvert" type="checkbox" checked> Автообновление</label>
@@ -63,10 +64,8 @@
     </section>
 
     <section class="preview-band">
-      <div>
-        <h2>Предпросмотр активной версии</h2>
-        <div id="preview"></div>
-      </div>
+      <h2>Предпросмотр активной версии</h2>
+      <div id="preview"></div>
     </section>
   </main>
 

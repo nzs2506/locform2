@@ -3,6 +3,7 @@ const convertBtn = document.querySelector("#convertBtn");
 const autoConvert = document.querySelector("#autoConvert");
 const keepLists = document.querySelector("#keepLists");
 const keepTables = document.querySelector("#keepTables");
+const dropZone = document.querySelector("#dropZone");
 const outputs = {
   compact: document.querySelector("#compactOutput"),
   mobile: document.querySelector("#mobileOutput"),
@@ -447,6 +448,26 @@ function previewHtml(html) {
     .replace(/\n{2,}/g, "\n");
 }
 
+function setSourceText(value) {
+  sourceText.value = value;
+  if (autoConvert.checked) convert();
+}
+
+function appendSourceText(value) {
+  const start = sourceText.selectionStart ?? sourceText.value.length;
+  const end = sourceText.selectionEnd ?? sourceText.value.length;
+  sourceText.setRangeText(value, start, end, "end");
+  if (autoConvert.checked) convert();
+}
+
+function readDroppedFile(file) {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    setSourceText(String(reader.result || ""));
+  });
+  reader.readAsText(file);
+}
+
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
@@ -482,6 +503,30 @@ sourceText.addEventListener("paste", (event) => {
   const end = sourceText.selectionEnd;
   sourceText.setRangeText(markedText, start, end, "end");
   if (autoConvert.checked) convert();
+});
+["dragenter", "dragover"].forEach((eventName) => {
+  dropZone.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    dropZone.classList.add("drag-over");
+  });
+});
+["dragleave", "dragend", "drop"].forEach((eventName) => {
+  dropZone.addEventListener(eventName, () => {
+    dropZone.classList.remove("drag-over");
+  });
+});
+dropZone.addEventListener("drop", (event) => {
+  event.preventDefault();
+
+  const file = event.dataTransfer?.files?.[0];
+  if (file) {
+    readDroppedFile(file);
+    return;
+  }
+
+  const html = event.dataTransfer?.getData("text/html");
+  const text = html ? htmlPasteToPlainText(html) : event.dataTransfer?.getData("text/plain");
+  if (text) appendSourceText(text);
 });
 sourceText.addEventListener("input", () => {
   if (autoConvert.checked) convert();
