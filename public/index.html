@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LOCform 2.0</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="workspace">
+      <div class="editor-pane">
+        <div class="pane-head">
+          <div>
+            <h1>LOCform 2.0</h1>
+            <span>Web, Mobile, Redesign</span>
+          </div>
+          <button id="convertBtn" type="button">Преобразовать</button>
+        </div>
+
+        <textarea id="sourceText" spellcheck="false" placeholder="Вставьте текст CRM/промо. Поддерживаются строки вида:
+Кнопка зеленая: Играть (/promotions/example)
+Кнопка белая: Подробнее (https://example.com/path?x=1& utm_medium=crm)"></textarea>
+
+        <div class="options">
+          <label><input id="autoConvert" type="checkbox" checked> Автообновление</label>
+          <label><input id="keepLists" type="checkbox" checked> Собирать списки</label>
+          <label><input id="keepTables" type="checkbox" checked> Собирать таблицы</label>
+        </div>
+      </div>
+
+      <div class="results-pane">
+        <div class="tabs" role="tablist" aria-label="Версии HTML">
+          <button class="tab active" type="button" data-tab="compact">Web</button>
+          <button class="tab" type="button" data-tab="mobile">Mobile</button>
+          <button class="tab" type="button" data-tab="pc">Redesign</button>
+        </div>
+
+        <section class="result active" data-panel="compact">
+          <div class="result-head">
+            <h2>Web</h2>
+            <button type="button" data-copy="compact">Копировать</button>
+          </div>
+          <textarea id="compactOutput" spellcheck="false"></textarea>
+        </section>
+
+        <section class="result" data-panel="mobile">
+          <div class="result-head">
+            <h2>Mobile</h2>
+            <button type="button" data-copy="mobile">Копировать</button>
+          </div>
+          <textarea id="mobileOutput" spellcheck="false"></textarea>
+        </section>
+
+        <section class="result" data-panel="pc">
+          <div class="result-head">
+            <h2>Redesign</h2>
+            <button type="button" data-copy="pc">Копировать</button>
+          </div>
+          <textarea id="pcOutput" spellcheck="false"></textarea>
+        </section>
+      </div>
+    </section>
+
+    <section class="preview-band">
+      <div>
+        <h2>Предпросмотр активной версии</h2>
+        <div id="preview"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
