@@ -58,6 +58,7 @@ function normalizeInputText(value) {
   return String(value || "")
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
+    .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s+button|White\\s+button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
     .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords})([?&=/#\\w-])`, "giu"), "$1$2");
 }
@@ -81,6 +82,24 @@ function isButtonLine(line) {
   return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:/iu.test(stripTags(line));
 }
 
+function splitSitePrefixedButton(line) {
+  const plain = stripTags(line);
+  const compact = plain.toLowerCase().replace(/[\s._-]+/g, "");
+  const oldPrefixes = ["oldsite", "старыйсайт"];
+  const redesignPrefixes = ["redesignsite", "redesign", "newsite", "newversion", "редизайн", "новыйсайт"];
+  const marker = oldPrefixes.some((prefix) => compact.startsWith(prefix))
+    ? "old"
+    : redesignPrefixes.some((prefix) => compact.startsWith(prefix))
+      ? "redesign"
+      : "";
+  if (!marker) return null;
+
+  const button = plain.match(/(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:/iu);
+  if (!button || button.index === 0) return null;
+
+  return { marker, button: plain.slice(button.index).trim() };
+}
+
 function normalizeButtonBlocks(value) {
   const lines = normalizeInputText(value).split("\n");
   const out = [];
@@ -101,8 +120,9 @@ function normalizeButtonBlocks(value) {
     let rest = marker[2].trim();
     let next = index + 1;
 
-    if (rest && /\(((?:https?:\/\/|\/)[^)]+)\)\s*$/iu.test(rest)) {
-      out.push(`${label}: ${rest}`);
+    const inlineUrl = rest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[^\n]+?)\)?\s*$/iu);
+    if (inlineUrl) {
+      out.push(`${label}: ${inlineUrl[1].trim()} (${cleanUrl(inlineUrl[2])})`);
       index += 1;
       continue;
     }
@@ -211,35 +231,62 @@ function serviceKeyBase(key) {
   return key.replace(/\.topic$/i, "");
 }
 
-function keyLabel(key) {
+function languageHeader(line) {
+  const plain = stripTags(line).replace(/\s+/g, " ").trim();
+  const match = plain.match(/^(?:PC|COM|MOB|WEB|APP|AN)?\s*(ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b/i);
+  if (!match) return "";
+  return match[1].toUpperCase();
+}
+
+function topicKey(key, language) {
+  return `${language || ""}|${key}`;
+}
+
+function keyLabel(section) {
+  const key = section.key;
   const match = key.match(/^message\.service\.([a-z]{2,5})\.(\d+)$/i);
-  if (match) return `${match[1]}.${match[2]}`;
-  return key.replace(/^.*\.(\d+)$/, "$1");
+  const base = match ? `${match[1]}.${match[2]}` : key.replace(/^.*\.(\d+)$/, "$1");
+  return section.language ? `${base} · ${section.language}` : base;
 }
 
 function parseNotifications(text) {
   const lines = normalizeButtonBlocks(text).split("\n");
   const sections = [];
   const topics = {};
+  let language = "";
   let key = "";
   let body = [];
   let awaitingTopicFor = "";
+  let awaitingTopicLanguage = "";
 
   function save() {
     if (!key) return;
     sections.push({
       key,
-      topic: topics[key] || "",
+      language,
+      topic: topics[topicKey(key, language)] || topics[topicKey(key, "")] || "",
       body: body.join("\n").trim(),
     });
   }
 
   for (const raw of lines) {
     const plain = stripTags(raw);
+    const nextLanguage = languageHeader(raw);
+
+    if (nextLanguage) {
+      if (key) save();
+      language = nextLanguage;
+      key = "";
+      body = [];
+      awaitingTopicFor = "";
+      awaitingTopicLanguage = "";
+      continue;
+    }
 
     if (isServiceKeyLine(raw)) {
       if (/\.topic$/i.test(plain)) {
         awaitingTopicFor = serviceKeyBase(plain);
+        awaitingTopicLanguage = language;
         continue;
       }
 
@@ -251,8 +298,9 @@ function parseNotifications(text) {
     }
 
     if (awaitingTopicFor && plain && !/неразрывные\s+пробелы/iu.test(plain)) {
-      topics[awaitingTopicFor] = formatInline(plain);
+      topics[topicKey(awaitingTopicFor, awaitingTopicLanguage)] = formatInline(plain);
       awaitingTopicFor = "";
+      awaitingTopicLanguage = "";
       continue;
     }
 
@@ -268,7 +316,7 @@ function parseNotifications(text) {
 
   return sections.map((section) => ({
     ...section,
-    topic: section.topic || topics[section.key] || "",
+    topic: section.topic || topics[topicKey(section.key, section.language)] || topics[topicKey(section.key, "")] || "",
   }));
 }
 
@@ -278,6 +326,13 @@ function bodyForSite(text, target) {
   let scope = "old";
 
   for (const line of lines) {
+    const prefixed = splitSitePrefixedButton(line);
+    if (prefixed) {
+      if (prefixed.marker === target) out.push(prefixed.button);
+      scope = "old";
+      continue;
+    }
+
     const marker = siteMarker(line);
     if (marker) {
       scope = marker;
@@ -562,6 +617,8 @@ function normalizeDocxHtml(html) {
     .replace(/<p[^>]*>/gi, "")
     .replace(/<(?!\/?(?:b|i)\b)[^>]+>/gi, "");
 
+  text = text.replace(/(?:<b>)?(message\.service(?:\.(?!topic\b)[a-z0-9_-]+)+(?:\.topic)?)(?:<\/b>)?\s*/gi, "\n$1\n");
+
   return normalizeButtonBlocks(text);
 }
 
@@ -638,7 +695,7 @@ function renderKeyTabs() {
   }
 
   keyTabs.innerHTML = parsedNotifications.map((section, index) => (
-    `<button class="key-tab${index === activeNotificationIndex ? " active" : ""}" type="button" data-key-index="${index}" title="${escapeHtml(section.key)}">${escapeHtml(keyLabel(section.key))}</button>`
+    `<button class="key-tab${index === activeNotificationIndex ? " active" : ""}" type="button" data-key-index="${index}" title="${escapeHtml(section.key)}">${escapeHtml(keyLabel(section))}</button>`
   )).join("");
 }
 
