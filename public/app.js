@@ -78,7 +78,7 @@ function siteMarker(line) {
 }
 
 function isButtonLine(line) {
-  return /^(Кнопка\s+зел[её]ная|Зел[её]ная\s+кнопка|Button\s+green|Green\s+button|Кнопка\s+белая|Белая\s+кнопка|Button\s+white|White\s+button)\s*:/iu.test(stripTags(line));
+  return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:/iu.test(stripTags(line));
 }
 
 function normalizeButtonBlocks(value) {
@@ -89,7 +89,7 @@ function normalizeButtonBlocks(value) {
   while (index < lines.length) {
     const line = lines[index];
     const plain = stripTags(line);
-    const marker = plain.match(/^(Кнопка\s+зел[её]ная|Зел[её]ная\s+кнопка|Button\s+green|Green\s+button|Кнопка\s+белая|Белая\s+кнопка|Button\s+white|White\s+button)\s*:?\s*(.*)$/iu);
+    const marker = plain.match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:?\s*(.*)$/iu);
 
     if (!marker) {
       out.push(line);
@@ -407,7 +407,7 @@ function parseTextChunk(text) {
 }
 
 function extractSegments(input) {
-  const buttonPattern = /(Кнопка\s+зел[её]ная|Зел[её]ная\s+кнопка|Button\s+green|Green\s+button|Кнопка\s+белая|Белая\s+кнопка|Button\s+white|White\s+button)\s*:\s*([^\n(]+?)\s*\(((?:https?:\/\/|\/)[^)]+)\)/giu;
+  const buttonPattern = /(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:\s*([^\n(]+?)\s*\(((?:https?:\/\/|\/)[^)]+)\)/giu;
   const segments = [];
   let lastIndex = 0;
   let pendingButtons = [];
@@ -615,7 +615,7 @@ function renderSegments(version, segments) {
     const next = segments[index + 1];
 
     if (segment.type === "break") {
-      if (next?.type !== "button" && !String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
+      if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
       continue;
     }
 
@@ -656,8 +656,8 @@ function renderCurrentNotification() {
   const oldSegments = extractSegments(bodyForSite(section.body, "old"));
   const redesignSegments = extractSegments(bodyForSite(section.body, "redesign"));
 
-  outputs.compact.value = renderSegments("mobile", oldSegments);
-  outputs.mobile.value = renderSegments("compact", oldSegments);
+  outputs.compact.value = renderSegments("compact", oldSegments);
+  outputs.mobile.value = renderSegments("mobile", oldSegments);
   outputs.pc.value = renderSegments("pc", redesignSegments.length ? redesignSegments : oldSegments);
 
   updatePreview();
