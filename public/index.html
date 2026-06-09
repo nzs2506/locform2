@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LOCform 2.0</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -19,8 +20,8 @@
         </div>
 
         <div class="textarea-wrap">
-          <textarea id="sourceText" spellcheck="false" placeholder="Вставьте текст CRM/промо или перетащите сюда .txt/.html файл"></textarea>
-          <div class="drop-hint">Отпустите текст или файл здесь</div>
+          <textarea id="sourceText" spellcheck="false" placeholder="Вставьте текст CRM/промо или перетащите сюда .docx/.txt/.html файл"></textarea>
+          <div class="drop-hint">Отпустите .docx, .txt или .html файл здесь</div>
         </div>
 
         <div class="options">
@@ -31,13 +32,26 @@
       </div>
 
       <div class="results-pane">
+        <div class="key-tabs" id="keyTabs" aria-label="Ключи">
+          <span class="key-empty">Ключи появятся после преобразования</span>
+        </div>
+
         <div class="tabs" role="tablist" aria-label="Версии HTML">
-          <button class="tab active" type="button" data-tab="compact">Web</button>
+          <button class="tab active" type="button" data-tab="topic">Topic</button>
+          <button class="tab" type="button" data-tab="compact">Web</button>
           <button class="tab" type="button" data-tab="mobile">Mobile</button>
           <button class="tab" type="button" data-tab="pc">Redesign</button>
         </div>
 
-        <section class="result active" data-panel="compact">
+        <section class="result active" data-panel="topic">
+          <div class="result-head">
+            <h2>Topic</h2>
+            <button type="button" data-copy="topic">Копировать</button>
+          </div>
+          <textarea id="topicOutput" spellcheck="false"></textarea>
+        </section>
+
+        <section class="result" data-panel="compact">
           <div class="result-head">
             <h2>Web</h2>
             <button type="button" data-copy="compact">Копировать</button>

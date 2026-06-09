@@ -69,7 +69,7 @@ button:hover {
 
 .results-pane {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .pane-head {
@@ -172,6 +172,35 @@ textarea {
   gap: 8px;
   padding: 12px;
   border-bottom: 1px solid var(--line);
+}
+
+.key-tabs {
+  display: flex;
+  gap: 6px;
+  min-height: 50px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.key-tab {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.key-tab.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.key-empty {
+  align-self: center;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .tab.active {

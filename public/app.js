@@ -5,11 +5,15 @@ const keepLists = document.querySelector("#keepLists");
 const keepTables = document.querySelector("#keepTables");
 const dropZone = document.querySelector("#dropZone");
 const outputs = {
+  topic: document.querySelector("#topicOutput"),
   compact: document.querySelector("#compactOutput"),
   mobile: document.querySelector("#mobileOutput"),
   pc: document.querySelector("#pcOutput"),
 };
+const keyTabs = document.querySelector("#keyTabs");
 const preview = document.querySelector("#preview");
+let parsedNotifications = [];
+let activeNotificationIndex = 0;
 
 const stableNames = [
   "Drops & Wins",
@@ -31,6 +35,7 @@ function escapeHtml(value) {
 function restoreAllowedTags(value) {
   return value
     .replace(/&lt;(\/?)b&gt;/g, "<$1b>")
+    .replace(/&lt;(\/?)i&gt;/g, "<$1i>")
     .replace(/&lt;br&gt;/g, "<br>")
     .replace(/&lt;br\/&gt;/g, "<br>");
 }
@@ -42,6 +47,80 @@ function cleanUrl(raw) {
     .replace(/\s*&\s*/g, "&")
     .replace(/\s*=\s*/g, "=")
     .replace(/\s+/g, "");
+}
+
+function stripTags(value) {
+  return String(value || "").replace(/<[^>]+>/g, "").trim();
+}
+
+function normalizeInputText(value) {
+  return String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/&amp;/g, "&")
+    .replace(/(\([^)]+\))\s*(Redesign site|OLD SITE|NEW SITE|Старый сайт|Новый сайт)/giu, "$1\n$2")
+    .replace(/(https?:\/\/[^\n\s]+|\/[^\n\s)]+)\n(?!Redesign site|OLD SITE|NEW SITE|Старый сайт|Новый сайт)([?&=/#\w-])/giu, "$1$2");
+}
+
+function siteMarker(line) {
+  const plain = stripTags(line);
+  if (/^(?:OLD\s+SITE|старый\s+сайт)$/iu.test(plain)) return "old";
+  if (/^(?:Redesign\s+site|NEW\s+SITE|новый\s+сайт)$/iu.test(plain)) return "redesign";
+  return "";
+}
+
+function isButtonLine(line) {
+  return /^(Кнопка\s+зел[её]ная|Зел[её]ная\s+кнопка|Button\s+green|Green\s+button|Кнопка\s+белая|Белая\s+кнопка|Button\s+white|White\s+button)\s*:/iu.test(stripTags(line));
+}
+
+function normalizeButtonBlocks(value) {
+  const lines = normalizeInputText(value).split("\n");
+  const out = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const plain = stripTags(line);
+    const marker = plain.match(/^(Кнопка\s+зел[её]ная|Зел[её]ная\s+кнопка|Button\s+green|Green\s+button|Кнопка\s+белая|Белая\s+кнопка|Button\s+white|White\s+button)\s*:?\s*(.*)$/iu);
+
+    if (!marker) {
+      out.push(line);
+      index += 1;
+      continue;
+    }
+
+    const label = marker[1];
+    let rest = marker[2].trim();
+    let next = index + 1;
+
+    if (rest && /\(((?:https?:\/\/|\/)[^)]+)\)\s*$/iu.test(rest)) {
+      out.push(`${label}: ${rest}`);
+      index += 1;
+      continue;
+    }
+
+    while (next < lines.length && !stripTags(lines[next])) next += 1;
+
+    if (!rest && next < lines.length) {
+      rest = stripTags(lines[next]);
+      next += 1;
+    }
+
+    while (next < lines.length && !stripTags(lines[next])) next += 1;
+
+    if (rest && next < lines.length) {
+      const url = stripTags(lines[next]);
+      if (/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url)) {
+        out.push(`${label}: ${rest} (${cleanUrl(url)})`);
+        index = next + 1;
+        continue;
+      }
+    }
+
+    out.push(line);
+    index += 1;
+  }
+
+  return out.join("\n");
 }
 
 function applyNbsp(value) {
@@ -112,6 +191,100 @@ function stripServiceLines(text) {
   return text
     .replace(/^\s*message\.service[\w.-]*(?:\s*[:=].*)?$/gim, "")
     .replace(/^\s*(?:\.topic|topic)\s*[:=].*$/gim, "");
+}
+
+function isServiceKeyLine(line) {
+  const plain = stripTags(line);
+  return /^message\.service(?:\.[a-z0-9_-]+)+$/i.test(plain);
+}
+
+function serviceKeyBase(key) {
+  return key.replace(/\.topic$/i, "");
+}
+
+function keyLabel(key) {
+  const match = key.match(/^message\.service\.([a-z]{2,5})\.(\d+)$/i);
+  if (match) return `${match[1]}.${match[2]}`;
+  return key.replace(/^.*\.(\d+)$/, "$1");
+}
+
+function parseNotifications(text) {
+  const lines = normalizeButtonBlocks(text).split("\n");
+  const sections = [];
+  const topics = {};
+  let key = "";
+  let body = [];
+  let awaitingTopicFor = "";
+
+  function save() {
+    if (!key) return;
+    sections.push({
+      key,
+      topic: topics[key] || "",
+      body: body.join("\n").trim(),
+    });
+  }
+
+  for (const raw of lines) {
+    const plain = stripTags(raw);
+
+    if (isServiceKeyLine(raw)) {
+      if (/\.topic$/i.test(plain)) {
+        awaitingTopicFor = serviceKeyBase(plain);
+        continue;
+      }
+
+      save();
+      key = plain;
+      body = [];
+      awaitingTopicFor = "";
+      continue;
+    }
+
+    if (awaitingTopicFor && plain && !/неразрывные\s+пробелы/iu.test(plain)) {
+      topics[awaitingTopicFor] = formatInline(plain);
+      awaitingTopicFor = "";
+      continue;
+    }
+
+    if (/неразрывные\s+пробелы/iu.test(plain)) continue;
+    if (key) body.push(raw);
+  }
+
+  save();
+
+  if (!sections.length && text.trim()) {
+    sections.push({ key: "output", topic: "", body: normalizeButtonBlocks(text) });
+  }
+
+  return sections.map((section) => ({
+    ...section,
+    topic: section.topic || topics[section.key] || "",
+  }));
+}
+
+function bodyForSite(text, target) {
+  const lines = normalizeButtonBlocks(text).split("\n");
+  const out = [];
+  let scope = "old";
+
+  for (const line of lines) {
+    const marker = siteMarker(line);
+    if (marker) {
+      scope = marker;
+      continue;
+    }
+
+    if (isButtonLine(line)) {
+      if (scope === target) out.push(line);
+      scope = "old";
+      continue;
+    }
+
+    out.push(line);
+  }
+
+  return out.join("\n");
 }
 
 function normalizeTextChunk(text) {
@@ -357,6 +530,32 @@ function htmlPasteToPlainText(html) {
 
 window.htmlPasteToPlainText = htmlPasteToPlainText;
 
+function normalizeDocxHtml(html) {
+  let text = String(html || "");
+
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) => {
+    const url = href.replace(/&amp;/g, "&");
+    const label = inner.replace(/<[^>]+>/g, "").trim();
+    if (!label || label === url) return url;
+    return `${label} (${url})`;
+  });
+
+  text = text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<strong>/gi, "<b>")
+    .replace(/<\/strong>/gi, "</b>")
+    .replace(/<em>/gi, "<i>")
+    .replace(/<\/em>/gi, "</i>")
+    .replace(/<h[1-6][^>]*>/gi, "<b>")
+    .replace(/<\/h[1-6]>/gi, "</b>\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<p[^>]*>/gi, "")
+    .replace(/<(?!\/?(?:b|i)\b)[^>]+>/gi, "");
+
+  return normalizeButtonBlocks(text);
+}
+
 function makeButtonHtml(version, buttons) {
   if (!buttons.length) return "";
 
@@ -423,14 +622,43 @@ function renderSegments(version, segments) {
   return rendered.join("").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function convert() {
-  const segments = extractSegments(sourceText.value);
-
-  for (const version of Object.keys(outputs)) {
-    outputs[version].value = renderSegments(version, segments);
+function renderKeyTabs() {
+  if (!parsedNotifications.length) {
+    keyTabs.innerHTML = '<span class="key-empty">Ключи появятся после преобразования</span>';
+    return;
   }
 
+  keyTabs.innerHTML = parsedNotifications.map((section, index) => (
+    `<button class="key-tab${index === activeNotificationIndex ? " active" : ""}" type="button" data-key-index="${index}" title="${escapeHtml(section.key)}">${escapeHtml(keyLabel(section.key))}</button>`
+  )).join("");
+}
+
+function renderCurrentNotification() {
+  const section = parsedNotifications[activeNotificationIndex];
+
+  if (!section) {
+    Object.values(outputs).forEach((output) => { output.value = ""; });
+    updatePreview();
+    return;
+  }
+
+  outputs.topic.value = section.topic || "";
+
+  const oldSegments = extractSegments(bodyForSite(section.body, "old"));
+  const redesignSegments = extractSegments(bodyForSite(section.body, "redesign"));
+
+  outputs.compact.value = renderSegments("mobile", oldSegments);
+  outputs.mobile.value = renderSegments("compact", oldSegments);
+  outputs.pc.value = renderSegments("pc", redesignSegments.length ? redesignSegments : oldSegments);
+
   updatePreview();
+}
+
+function convert() {
+  parsedNotifications = parseNotifications(sourceText.value);
+  activeNotificationIndex = 0;
+  renderKeyTabs();
+  renderCurrentNotification();
 }
 
 function activeVersion() {
@@ -460,10 +688,22 @@ function appendSourceText(value) {
   if (autoConvert.checked) convert();
 }
 
-function readDroppedFile(file) {
+async function readDroppedFile(file) {
+  if (/\.docx$/i.test(file.name)) {
+    if (typeof mammoth === "undefined") {
+      window.alert("Не удалось загрузить .docx: Mammoth.js недоступен.");
+      return;
+    }
+
+    const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+    setSourceText(normalizeDocxHtml(result.value));
+    return;
+  }
+
   const reader = new FileReader();
   reader.addEventListener("load", () => {
-    setSourceText(String(reader.result || ""));
+    const raw = String(reader.result || "");
+    setSourceText(/\.html?$/i.test(file.name) ? htmlPasteToPlainText(raw) : raw);
   });
   reader.readAsText(file);
 }
@@ -476,6 +716,14 @@ document.querySelectorAll(".tab").forEach((tab) => {
     document.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add("active");
     updatePreview();
   });
+});
+
+keyTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-key-index]");
+  if (!button) return;
+  activeNotificationIndex = Number(button.dataset.keyIndex);
+  renderKeyTabs();
+  renderCurrentNotification();
 });
 
 document.querySelectorAll("[data-copy]").forEach((button) => {
@@ -520,7 +768,9 @@ dropZone.addEventListener("drop", (event) => {
 
   const file = event.dataTransfer?.files?.[0];
   if (file) {
-    readDroppedFile(file);
+    readDroppedFile(file).catch((error) => {
+      window.alert(`Не удалось прочитать файл: ${error.message}`);
+    });
     return;
   }
 
