@@ -54,17 +54,26 @@ function stripTags(value) {
 }
 
 function normalizeInputText(value) {
+  const siteWords = "(?:old\\s*site|oldsite|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
   return String(value || "")
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
-    .replace(/(\([^)]+\))\s*(Redesign site|OLD SITE|NEW SITE|Старый сайт|Новый сайт)/giu, "$1\n$2")
-    .replace(/(https?:\/\/[^\n\s]+|\/[^\n\s)]+)\n(?!Redesign site|OLD SITE|NEW SITE|Старый сайт|Новый сайт)([?&=/#\w-])/giu, "$1$2");
+    .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
+    .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords})([?&=/#\\w-])`, "giu"), "$1$2");
 }
 
 function siteMarker(line) {
-  const plain = stripTags(line);
-  if (/^(?:OLD\s+SITE|старый\s+сайт)$/iu.test(plain)) return "old";
-  if (/^(?:Redesign\s+site|NEW\s+SITE|новый\s+сайт)$/iu.test(plain)) return "redesign";
+  const plain = stripTags(line).toLowerCase();
+  const compact = plain.replace(/[\s._-]+/g, "");
+  if (compact === "oldsite" || compact === "старыйсайт") return "old";
+  if (
+    compact === "redesignsite" ||
+    compact === "redesign" ||
+    compact === "newsite" ||
+    compact === "newversion" ||
+    compact === "редизайн" ||
+    compact === "новыйсайт"
+  ) return "redesign";
   return "";
 }
 
