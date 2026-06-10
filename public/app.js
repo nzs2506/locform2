@@ -200,9 +200,33 @@ function normalizeBold(value) {
   return text;
 }
 
+function balanceInlineTags(value) {
+  let html = String(value || "");
+
+  ["b", "i"].forEach((tag) => {
+    const openRe = new RegExp(`<${tag}>`, "g");
+    const closeRe = new RegExp(`</${tag}>`, "g");
+    const opens = html.match(openRe)?.length || 0;
+    const closes = html.match(closeRe)?.length || 0;
+
+    if (closes > opens) {
+      let extra = closes - opens;
+      html = html.replace(closeRe, (match) => {
+        if (extra <= 0) return match;
+        extra -= 1;
+        return "";
+      });
+    } else if (opens > closes) {
+      html += `</${tag}>`.repeat(opens - closes);
+    }
+  });
+
+  return html;
+}
+
 function formatInline(line) {
   const escaped = restoreAllowedTags(escapeHtml(normalizeBold(line.trim())));
-  return applyNbsp(escaped);
+  return applyNbsp(balanceInlineTags(escaped));
 }
 
 function parseButton(matchText, color, label, url) {
