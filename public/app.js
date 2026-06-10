@@ -38,8 +38,22 @@ function restoreAllowedTags(value) {
   return value
     .replace(/&lt;(\/?)b&gt;/g, "<$1b>")
     .replace(/&lt;(\/?)i&gt;/g, "<$1i>")
+    .replace(/&lt;(\/?)u&gt;/g, "<$1u>")
+    .replace(/&lt;a href="([^"]+)"&gt;/g, '<a href="$1">')
+    .replace(/&lt;\/a&gt;/g, "</a>")
     .replace(/&lt;br&gt;/g, "<br>")
     .replace(/&lt;br\/&gt;/g, "<br>");
+}
+
+function inlineLinkHtml(href, label) {
+  const safeHref = String(href || "").replace(/"/g, "%22").replace(/&amp;/g, "&");
+  const cleanLabel = String(label || "").replace(/<[^>]+>/g, "").trim();
+  if (!cleanLabel || cleanLabel === safeHref) return safeHref;
+  return `<u><i><a href="${safeHref}">${cleanLabel}</a></i></u>`;
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function cleanUrl(raw) {
@@ -186,7 +200,7 @@ function normalizeBold(value) {
 function balanceInlineTags(value) {
   let html = String(value || "");
 
-  ["b", "i"].forEach((tag) => {
+  ["b", "i", "u"].forEach((tag) => {
     const openRe = new RegExp(`<${tag}>`, "g");
     const closeRe = new RegExp(`</${tag}>`, "g");
     const opens = html.match(openRe)?.length || 0;
@@ -636,6 +650,13 @@ function xmlChildrenByLocalName(node, localName) {
   return [...node.getElementsByTagName("*")].filter((child) => child.localName === localName);
 }
 
+function xmlAttribute(node, localName) {
+  if (!node) return "";
+  return node.getAttribute(localName)
+    || [...node.attributes].find((attribute) => attribute.localName === localName)?.value
+    || "";
+}
+
 function runText(run) {
   return xmlChildrenByLocalName(run, "t").map((node) => node.textContent || "").join("");
 }
@@ -645,17 +666,40 @@ function runHighlightColor(run) {
   if (!rPr) return null;
 
   const highlight = xmlChildrenByLocalName(rPr, "highlight")[0];
-  const highlightColor = wordColorKind(highlight?.getAttribute("w:val") || highlight?.getAttribute("val"));
+  const highlightColor = wordColorKind(xmlAttribute(highlight, "val"));
   if (highlightColor) return highlightColor;
 
   const shading = xmlChildrenByLocalName(rPr, "shd")[0];
-  return wordColorKind(shading?.getAttribute("w:fill") || shading?.getAttribute("fill"));
+  return wordColorKind(xmlAttribute(shading, "fill"));
 }
 
 function pushHighlightHint(hints, text, color) {
   const clean = String(text || "").replace(/\s+/g, " ").trim();
   if (!clean || !color) return;
   hints.push({ text: clean, color });
+}
+
+function pushInlineLinkHint(hints, text, href) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  const cleanHref = String(href || "").trim();
+  if (!clean || !cleanHref) return;
+  hints.push({ text: clean, href: cleanHref });
+}
+
+function relationshipTargetMap(xmlText) {
+  const map = {};
+  if (!xmlText) return map;
+
+  const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+  [...xml.getElementsByTagName("*")]
+    .filter((node) => node.localName === "Relationship")
+    .forEach((node) => {
+      const id = node.getAttribute("Id");
+      const target = node.getAttribute("Target");
+      if (id && target) map[id] = target;
+    });
+
+  return map;
 }
 
 async function extractDocxHighlightHints(arrayBuffer) {
@@ -704,6 +748,79 @@ async function extractDocxHighlightHints(arrayBuffer) {
   const seen = new Set();
   return hints.filter((hint) => {
     const key = `${hint.color}:${hint.text.toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function extractDocxInlineLinkHints(arrayBuffer) {
+  if (typeof JSZip === "undefined") return [];
+
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const documentFile = zip.file("word/document.xml");
+  if (!documentFile) return [];
+
+  const [xmlText, relsText] = await Promise.all([
+    documentFile.async("string"),
+    zip.file("word/_rels/document.xml.rels")?.async("string") || Promise.resolve(""),
+  ]);
+  const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+  const rels = relationshipTargetMap(relsText);
+  const hints = [];
+
+  [...xml.getElementsByTagName("*")]
+    .filter((node) => node.localName === "hyperlink")
+    .forEach((node) => {
+      const id = xmlAttribute(node, "id");
+      pushInlineLinkHint(hints, xmlChildrenByLocalName(node, "t").map((item) => item.textContent || "").join(""), rels[id]);
+    });
+
+  [...xml.getElementsByTagName("*")]
+    .filter((node) => node.localName === "p")
+    .forEach((paragraph) => {
+      let href = "";
+      let text = "";
+      let collecting = false;
+
+      xmlChildrenByLocalName(paragraph, "r").forEach((run) => {
+        const fldChar = xmlChildrenByLocalName(run, "fldChar")[0];
+        const fldType = xmlAttribute(fldChar, "fldCharType");
+
+        if (fldType === "begin") {
+          href = "";
+          text = "";
+          collecting = false;
+          return;
+        }
+
+        const instr = xmlChildrenByLocalName(run, "instrText").map((item) => item.textContent || "").join("");
+        const match = instr.match(/HYPERLINK\s+"([^"]+)"/i);
+        if (match) {
+          href = match[1];
+          return;
+        }
+
+        if (fldType === "separate") {
+          collecting = Boolean(href);
+          return;
+        }
+
+        if (fldType === "end") {
+          pushInlineLinkHint(hints, text, href);
+          href = "";
+          text = "";
+          collecting = false;
+          return;
+        }
+
+        if (collecting) text += runText(run);
+      });
+    });
+
+  const seen = new Set();
+  return hints.filter((hint) => {
+    const key = `${hint.href}:${hint.text.toLowerCase()}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -772,16 +889,38 @@ function applyDocxHighlightButtonHints(text, hints = []) {
   return output.join("\n");
 }
 
-function normalizeDocxHtml(html, highlightHints = []) {
+function inlineLinkPattern(label) {
+  const parts = String(label || "").trim().split(/\s+/).filter(Boolean).map(escapeRegExp);
+  if (!parts.length) return null;
+  return new RegExp(parts.join("[\\s\\u00a0]+"), "gu");
+}
+
+function applyDocxInlineLinkHints(text, hints = []) {
+  if (!hints.length) return text;
+
+  return String(text || "").split("\n").map((line) => {
+    const chunks = line.split(/(<u><i><a href="[^"]+">[\s\S]*?<\/a><\/i><\/u>)/g);
+
+    return chunks.map((chunk) => {
+      if (/^<u><i><a href=/.test(chunk)) return chunk;
+
+      return hints
+        .slice()
+        .sort((a, b) => b.text.length - a.text.length)
+        .reduce((value, hint) => {
+          const pattern = inlineLinkPattern(hint.text);
+          if (!pattern) return value;
+          return value.replace(pattern, (match) => inlineLinkHtml(hint.href, match));
+        }, chunk);
+    }).join("");
+  }).join("\n");
+}
+
+function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
   let text = String(html || "");
 
   text = text.replace(/&amp;/g, "&");
-  text = text.replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) => {
-    const url = href.replace(/&amp;/g, "&");
-    const label = inner.replace(/<[^>]+>/g, "").trim();
-    if (!label || label === url) return url;
-    return `${label} (${url})`;
-  });
+  text = text.replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) => inlineLinkHtml(href, inner));
 
   text = text
     .replace(/<br\s*\/?>/gi, "\n")
@@ -793,10 +932,11 @@ function normalizeDocxHtml(html, highlightHints = []) {
     .replace(/<\/h[1-6]>/gi, "</b>\n")
     .replace(/<\/p>/gi, "\n")
     .replace(/<p[^>]*>/gi, "")
-    .replace(/<(?!\/?(?:b|i)\b)[^>]+>/gi, "");
+    .replace(/<(?!\/?(?:b|i|u|a)\b)[^>]+>/gi, "");
 
   text = text.replace(/(?:<b>)?(message\.service(?:\.(?!topic\b)[a-z0-9_-]+)+(?:\.topic)?)(?:<\/b>)?\s*/gi, "\n$1\n");
 
+  text = applyDocxInlineLinkHints(text, inlineLinkHints);
   text = applyDocxHighlightButtonHints(text, highlightHints);
 
   return normalizeButtonBlocks(text);
@@ -949,11 +1089,12 @@ async function readDroppedFile(file) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const [highlightHints, result] = await Promise.all([
+    const [highlightHints, inlineLinkHints, result] = await Promise.all([
       extractDocxHighlightHints(arrayBuffer.slice(0)).catch(() => []),
+      extractDocxInlineLinkHints(arrayBuffer.slice(0)).catch(() => []),
       mammoth.convertToHtml({ arrayBuffer: arrayBuffer.slice(0) }),
     ]);
-    setSourceText(normalizeDocxHtml(result.value, highlightHints));
+    setSourceText(normalizeDocxHtml(result.value, highlightHints, inlineLinkHints));
     return;
   }
 
