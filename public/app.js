@@ -58,6 +58,7 @@ function inlineLinkHtml(href, label) {
   const safeHref = absoluteInlineHref(href).replace(/"/g, "%22");
   const cleanLabel = String(label || "").replace(/<[^>]+>/g, "").trim();
   if (!cleanLabel || cleanLabel === safeHref) return safeHref;
+  if (/^(?:https?:\/\/|\/)\S+$/i.test(cleanLabel)) return safeHref;
   return `<a href="${safeHref}" target="_blank"><i><u>${cleanLabel}</u></i></a>`;
 }
 
@@ -149,6 +150,13 @@ function normalizeButtonBlocks(value) {
     const inlineUrl = rest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[^\n]+?)\)?\s*$/iu);
     if (inlineUrl) {
       out.push(`${label}: ${inlineUrl[1].trim()} (${cleanUrl(inlineUrl[2])})`);
+      index += 1;
+      continue;
+    }
+
+    const inlinePlainUrl = rest.match(/^(.+?)\s+((?:https?:\/\/|\/)\S+)\s*$/iu);
+    if (inlinePlainUrl) {
+      out.push(`${label}: ${inlinePlainUrl[1].trim()} (${cleanUrl(inlinePlainUrl[2])})`);
       index += 1;
       continue;
     }
