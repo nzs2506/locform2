@@ -567,9 +567,7 @@ function extractSegments(input) {
 
   function flushButtons() {
     if (!pendingButtons.length) return;
-    const green = pendingButtons.find((button) => button.color === "green");
-    const white = pendingButtons.find((button) => button.color === "white");
-    segments.push({ type: "button", buttons: [green, white].filter(Boolean) });
+    segments.push({ type: "button", buttons: pendingButtons });
     pendingButtons = [];
   }
 
@@ -994,6 +992,28 @@ function makeButtonHtml(version, buttons) {
   const green = buttons.find((button) => button.color === "green");
   const white = buttons.find((button) => button.color === "white");
   const safeText = (value) => applyNbsp(restoreAllowedTags(escapeHtml(value)));
+
+  const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
+  if (buttons.length > 2 || hasDuplicateColors) {
+    const anchor = (button, index) => {
+      const isWhite = button.color === "white";
+      const margin = index ? (version === "compact" ? "\n\n  " : "\n\n  ") : "";
+
+      if (version === "compact") {
+        return `${margin}<a href="${button.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 140px; height: 25px; padding: 0 12px;\n            background-color: ${isWhite ? "transparent" : "#07974D"}; color: ${isWhite ? "#07974D" : "#FFFFFF"}; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: ${isWhite ? "1px solid #07974D" : "none"};">\n    ${safeText(button.text)}\n  </a>`;
+      }
+
+      if (version === "mobile") {
+        return `${margin}<a href="${button.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 361px; height: 40px; padding: 9px 24px;${index ? " margin-top: 6px;" : ""}\n            background-color: ${isWhite ? "transparent" : "#07974D"}; color: ${isWhite ? "#07974D" : "#FFFFFF"}; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: ${isWhite ? "1px solid #07974D" : "none"}; transform: rotate(0deg);">\n    ${safeText(button.text)}\n  </a>`;
+      }
+
+      return `${margin}<a href="${button.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${isWhite ? "transparent" : "#01B462"}; color: ${isWhite ? "#01B462" : "#FFFFFF"}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: ${isWhite ? "2px solid #01B462" : "none"};">\n    ${safeText(button.text)}\n  </a>`;
+    };
+
+    if (version === "compact") return `<div style="display: inline-flex; gap: 8px;">\n  ${buttons.map(anchor).join("")}\n</div>`;
+    if (version === "mobile") return `<div style="display: flex; flex-direction: column;">\n  ${buttons.map(anchor).join("")}\n</div>`;
+    return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  ${buttons.map(anchor).join("")}\n\n</div>`;
+  }
 
   if (!green && white) {
     if (version === "compact") {
