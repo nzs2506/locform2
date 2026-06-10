@@ -716,17 +716,53 @@ function matchingHighlightHint(line, hints) {
     .find((hint) => lineKey.includes(looseTextKey(hint.text)));
 }
 
+function isUrlOnlyLine(line) {
+  return /^(?:https?:\/\/|\/)\S+$/i.test(stripTags(line).replace(/&amp;/g, "&"));
+}
+
+function buttonMarkerForColor(color) {
+  return color === "white" ? "Button white" : "Button green";
+}
+
+function buttonLabelFromHighlightedLine(line) {
+  return stripTags(line).replace(/^(?:кнопка|button)\s*:?\s*/iu, "").trim();
+}
+
 function applyDocxHighlightButtonHints(text, hints = []) {
   if (!hints.length) return text;
 
-  return String(text || "").split("\n").map((line) => {
-    if (!/\(((?:https?:\/\/|\/)[^)]+)\)/i.test(line) || isButtonLine(line)) return line;
-    const hint = matchingHighlightHint(line, hints);
-    if (!hint) return line;
+  const lines = String(text || "").split("\n");
+  const output = [];
 
-    const label = line.replace(/^(?:кнопка|button)\s*:?\s*/iu, "");
-    return `${hint.color === "green" ? "Кнопка зеленая" : "Кнопка белая"}: ${label}`;
-  }).join("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (isButtonLine(line)) {
+      output.push(line);
+      continue;
+    }
+
+    const hint = matchingHighlightHint(line, hints);
+    if (!hint) {
+      output.push(line);
+      continue;
+    }
+
+    if (/\(((?:https?:\/\/|\/)[^)]+)\)/i.test(line)) {
+      const label = line.replace(/^(?:кнопка|button)\s*:?\s*/iu, "");
+      output.push(`${buttonMarkerForColor(hint.color)}: ${label}`);
+      continue;
+    }
+
+    if (/^(?:\s*<[^>]+>)*\s*(?:кнопка|button)/iu.test(line) && isUrlOnlyLine(lines[index + 1] || "")) {
+      const label = buttonLabelFromHighlightedLine(line);
+      output.push(`${buttonMarkerForColor(hint.color)}: ${label}`);
+      continue;
+    }
+
+    output.push(line);
+  }
+
+  return output.join("\n");
 }
 
 function normalizeDocxHtml(html, highlightHints = []) {
