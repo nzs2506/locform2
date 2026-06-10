@@ -266,6 +266,16 @@ function startsWithAgeWarning(line) {
   return stripTags(line).replace(/&nbsp;/g, " ").trim().startsWith("18+");
 }
 
+function startsWithFinalAgeWarning(line) {
+  return /^18\+\s*[|│]/u.test(stripTags(line).replace(/&nbsp;/g, " ").trim());
+}
+
+function trimAfterAgeWarning(text) {
+  const lines = String(text || "").split("\n");
+  const index = lines.findIndex(startsWithFinalAgeWarning);
+  return index === -1 ? lines.join("\n") : lines.slice(0, index + 1).join("\n");
+}
+
 function ensureAgeWarningBreak(text) {
   const lines = String(text || "").split("\n");
   let last = lines.length - 1;
@@ -420,12 +430,12 @@ function bodyForSite(text, target) {
 }
 
 function normalizeTextChunk(text) {
-  const normalized = stripServiceLines(text)
+  const normalized = trimAfterAgeWarning(stripServiceLines(text)
     .replace(/\r\n?/g, "\n")
     .replace(/\s*Междустрочный (?:интервал|пробел)\s*/giu, "\n__BRBR__\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
-    .trim();
+    .trim());
 
   return ensureAgeWarningBreak(normalized);
 }
