@@ -177,27 +177,10 @@ function applyNbsp(value) {
     .replace(/вас —/g, "вас&nbsp;—");
 }
 
-function wrapOnce(value, pattern) {
-  return value.replace(pattern, (match) => {
-    if (match.includes("<b>") || match.includes("</b>")) return match;
-    return `<b>${match}</b>`;
-  });
-}
-
 function normalizeBold(value) {
-  let text = value
+  return value
     .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
     .replace(/__(.+?)__/g, "<b>$1</b>");
-
-  text = wrapOnce(text, /\d+(?:\s+\d{3})*\s+фриспинов/giu);
-  text = wrapOnce(text, /переводите\s+до\s+\d+(?:\s+\d{3})*\s+(?:BYN|UZS|₽|руб\.?|USD|EUR|\$|€)\s+на\s+основной\s+баланс!?/giu);
-
-  for (const name of stableNames) {
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    text = text.replace(new RegExp(`(?<!<b>)${escaped}(?!</b>)`, "g"), `<b>${name}</b>`);
-  }
-
-  return text;
 }
 
 function balanceInlineTags(value) {
