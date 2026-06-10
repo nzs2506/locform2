@@ -58,6 +58,7 @@ function normalizeInputText(value) {
   return String(value || "")
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
+    .replace(/(^|\n)\s*(?:<\/[bi]>\s*)+/gi, "$1")
     .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s+button|White\\s+button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
     .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords})([?&=/#\\w-])`, "giu"), "$1$2");
@@ -233,7 +234,7 @@ function serviceKeyBase(key) {
 
 function languageHeader(line) {
   const plain = stripTags(line).replace(/\s+/g, " ").trim();
-  const match = plain.match(/^(?:PC|COM|MOB|WEB|APP|AN)?\s*(ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b/i);
+  const match = plain.match(/^(?:PC|COM|MOB|WEB|APP|AN)?\s*(ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|ARG|LATAM|LAT|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b/i);
   if (!match) return "";
   return match[1].toUpperCase();
 }
@@ -712,10 +713,11 @@ function renderCurrentNotification() {
 
   const oldSegments = extractSegments(bodyForSite(section.body, "old"));
   const redesignSegments = extractSegments(bodyForSite(section.body, "redesign"));
+  const redesignRenderSegments = redesignSegments.some((segment) => segment.type === "button") ? redesignSegments : oldSegments;
 
   outputs.compact.value = renderSegments("compact", oldSegments);
   outputs.mobile.value = renderSegments("mobile", oldSegments);
-  outputs.pc.value = renderSegments("pc", redesignSegments.length ? redesignSegments : oldSegments);
+  outputs.pc.value = renderSegments("pc", redesignRenderSegments);
 
   updatePreview();
 }
