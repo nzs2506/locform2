@@ -223,6 +223,24 @@ function stripServiceLines(text) {
     .replace(/^\s*(?:\.topic|topic)\s*[:=].*$/gim, "");
 }
 
+function startsWithAgeWarning(line) {
+  return stripTags(line).replace(/&nbsp;/g, " ").trim().startsWith("18+");
+}
+
+function ensureAgeWarningBreak(text) {
+  const lines = String(text || "").split("\n");
+  let last = lines.length - 1;
+  while (last >= 0 && !stripTags(lines[last])) last -= 1;
+  if (last < 0 || !startsWithAgeWarning(lines[last])) return lines.join("\n");
+
+  let previous = last - 1;
+  while (previous >= 0 && !stripTags(lines[previous])) previous -= 1;
+  if (previous >= 0 && lines[previous].trim() === "__BRBR__") return lines.join("\n");
+
+  lines.splice(last, 0, "__BRBR__");
+  return lines.join("\n");
+}
+
 function isServiceKeyLine(line) {
   const plain = stripTags(line);
   return /^message\.service(?:\.[a-z0-9_-]+)+$/i.test(plain);
@@ -353,12 +371,14 @@ function bodyForSite(text, target) {
 }
 
 function normalizeTextChunk(text) {
-  return stripServiceLines(text)
+  const normalized = stripServiceLines(text)
     .replace(/\r\n?/g, "\n")
-    .replace(/\s*Междустрочный интервал\s*/giu, "\n__BRBR__\n")
+    .replace(/\s*Междустрочный (?:интервал|пробел)\s*/giu, "\n__BRBR__\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
     .trim();
+
+  return ensureAgeWarningBreak(normalized);
 }
 
 function numberedParts(text) {
