@@ -90,6 +90,29 @@ h1 {
   line-height: 1.2;
 }
 
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-color: var(--green);
+  border-radius: 50%;
+  color: var(--green-dark);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 h2 {
   font-size: 16px;
   line-height: 1.25;
@@ -282,6 +305,96 @@ textarea {
   background: #ffffff;
   font-family: Arial, sans-serif;
   white-space: normal;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 20, 17, 0.42);
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.guide-modal {
+  width: min(760px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(17, 20, 17, 0.22);
+}
+
+.guide-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.guide-close {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.guide-body {
+  max-height: calc(100vh - 150px);
+  padding: 18px;
+  overflow: auto;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.guide-body h3 {
+  margin: 18px 0 6px;
+  font-size: 15px;
+}
+
+.guide-body h3:first-child {
+  margin-top: 0;
+}
+
+.guide-body p {
+  margin: 0 0 10px;
+}
+
+.guide-body code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--ink);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+}
+
+.guide-body pre {
+  margin: 8px 0 14px;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfa;
+}
+
+.guide-body pre code {
+  padding: 0;
+  background: transparent;
+  white-space: pre;
 }
 
 @media (max-width: 920px) {

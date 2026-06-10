@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8</title>
+  <title>LOCform 3.8.1</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=3.8.1">
 </head>
 <body>
   <main class="shell">
@@ -14,7 +14,10 @@
       <div class="editor-pane" id="dropZone">
         <div class="pane-head">
           <div>
-            <h1>LOCform 3.8</h1>
+            <div class="brand-row">
+              <h1>LOCform 3.8.1</h1>
+              <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
+            </div>
             <span>Web, Mobile, Redesign</span>
           </div>
           <button id="convertBtn" type="button">Преобразовать</button>
@@ -90,6 +93,49 @@
     </section>
   </main>
 
-  <script src="app.js?v=3.8"></script>
+  <div id="guideModal" class="modal-backdrop" hidden>
+    <section class="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <div class="guide-head">
+        <h2 id="guideTitle">Как подготовить Word-файл</h2>
+        <button id="guideCloseBtn" class="guide-close" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div class="guide-body">
+        <h3>1. Ключи</h3>
+        <p>Для заголовка пишите ключ с окончанием <code>.topic</code>, для основного текста — такой же ключ без <code>.topic</code>.</p>
+        <pre><code>COM ENG
+message.service.6045.topic
+Day 1 is live!
+
+message.service.6045
+Main notification text...</code></pre>
+
+        <h3>2. Неразрывные пробелы</h3>
+        <p>В начале языкового блока можно перечислить фразы, где пробелы должны стать <code>&amp;nbsp;</code>.</p>
+        <pre><code>Неразрывные пробелы: Free Spins, Spin Master, Big Bass Football Bonanza</code></pre>
+
+        <h3>3. Кнопки и версии сайта</h3>
+        <p><code>redesign</code>, <code>new site</code>, <code>new version</code> — ссылка для Redesign. <code>Old version</code>, <code>old site</code> — ссылка для Web и Mobile.</p>
+        <pre><code>Зеленая кнопка:
+redesign
+Be A Spin Master
+/promotions/promotion/1578?utm_medium=an...
+
+Old version
+Be A Spin Master
+https://go2m.biz/...url_web=en/promotions/promotion/1578...</code></pre>
+
+        <h3>4. Цвета кнопок</h3>
+        <p>Зелёную кнопку можно писать как <code>Зеленая кнопка</code>, <code>Кнопка зеленая</code>, <code>Green button</code> или <code>Button green</code>. Белую — <code>Белая кнопка</code>, <code>Кнопка белая</code>, <code>White button</code> или <code>Button white</code>.</p>
+
+        <h3>5. Интервалы и 18+</h3>
+        <p>Для пустой строки пишите отдельной строкой <code>Междустрочный интервал</code>. После финальной строки <code>18+ | ...</code> ничего не добавляйте: всё ниже будет отрезано.</p>
+
+        <h3>6. Ссылки внутри текста</h3>
+        <p>Если фраза в Word уже содержит ссылку, скрипт сохранит её как подчёркнутую курсивную ссылку. Лучше вешать ссылку только на нужную фразу, не на весь абзац.</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js?v=3.8.1"></script>
 </body>
 </html>

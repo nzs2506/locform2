@@ -13,6 +13,9 @@ const outputs = {
 const keyTabs = document.querySelector("#keyTabs");
 const copyKeyBtn = document.querySelector("#copyKeyBtn");
 const copyTopicKeyBtn = document.querySelector("#copyTopicKeyBtn");
+const guideBtn = document.querySelector("#guideBtn");
+const guideModal = document.querySelector("#guideModal");
+const guideCloseBtn = document.querySelector("#guideCloseBtn");
 const preview = document.querySelector("#preview");
 let parsedNotifications = [];
 let activeNotificationIndex = 0;
@@ -1367,6 +1370,23 @@ copyKeyBtn.addEventListener("click", async () => {
 copyTopicKeyBtn.addEventListener("click", async () => {
   const section = activeNotification();
   await copyTextWithFeedback(copyTopicKeyBtn, section ? topicKeyFor(section) : "");
+});
+
+function openGuide() {
+  guideModal.hidden = false;
+}
+
+function closeGuide() {
+  guideModal.hidden = true;
+}
+
+guideBtn.addEventListener("click", openGuide);
+guideCloseBtn.addEventListener("click", closeGuide);
+guideModal.addEventListener("click", (event) => {
+  if (event.target === guideModal) closeGuide();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !guideModal.hidden) closeGuide();
 });
 
 convertBtn.addEventListener("click", convert);
