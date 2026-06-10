@@ -11,6 +11,8 @@ const outputs = {
   pc: document.querySelector("#pcOutput"),
 };
 const keyTabs = document.querySelector("#keyTabs");
+const copyKeyBtn = document.querySelector("#copyKeyBtn");
+const copyTopicKeyBtn = document.querySelector("#copyTopicKeyBtn");
 const preview = document.querySelector("#preview");
 let parsedNotifications = [];
 let activeNotificationIndex = 0;
@@ -712,12 +714,16 @@ function renderSegments(version, segments) {
 function renderKeyTabs() {
   if (!parsedNotifications.length) {
     keyTabs.innerHTML = '<span class="key-empty">Ключи появятся после преобразования</span>';
+    copyKeyBtn.disabled = true;
+    copyTopicKeyBtn.disabled = true;
     return;
   }
 
   keyTabs.innerHTML = parsedNotifications.map((section, index) => (
     `<button class="key-tab${index === activeNotificationIndex ? " active" : ""}" type="button" data-key-index="${index}" title="${escapeHtml(section.key)}">${escapeHtml(keyLabel(section))}</button>`
   )).join("");
+  copyKeyBtn.disabled = false;
+  copyTopicKeyBtn.disabled = false;
 }
 
 function renderCurrentNotification() {
@@ -725,6 +731,8 @@ function renderCurrentNotification() {
 
   if (!section) {
     Object.values(outputs).forEach((output) => { output.value = ""; });
+    copyKeyBtn.disabled = true;
+    copyTopicKeyBtn.disabled = true;
     updatePreview();
     return;
   }
@@ -814,16 +822,39 @@ keyTabs.addEventListener("click", (event) => {
   renderCurrentNotification();
 });
 
+function activeNotification() {
+  return parsedNotifications[activeNotificationIndex] || null;
+}
+
+function topicKeyFor(section) {
+  return `${serviceKeyBase(section.key)}.topic`;
+}
+
+async function copyTextWithFeedback(button, text) {
+  if (!text) return;
+  await navigator.clipboard.writeText(text);
+  const oldText = button.textContent;
+  button.textContent = "Скопировано";
+  setTimeout(() => {
+    button.textContent = oldText;
+  }, 1200);
+}
+
 document.querySelectorAll("[data-copy]").forEach((button) => {
   button.addEventListener("click", async () => {
     const version = button.dataset.copy;
-    await navigator.clipboard.writeText(outputs[version].value);
-    const oldText = button.textContent;
-    button.textContent = "Скопировано";
-    setTimeout(() => {
-      button.textContent = oldText;
-    }, 1200);
+    await copyTextWithFeedback(button, outputs[version].value);
   });
+});
+
+copyKeyBtn.addEventListener("click", async () => {
+  const section = activeNotification();
+  await copyTextWithFeedback(copyKeyBtn, section?.key || "");
+});
+
+copyTopicKeyBtn.addEventListener("click", async () => {
+  const section = activeNotification();
+  await copyTextWithFeedback(copyTopicKeyBtn, section ? topicKeyFor(section) : "");
 });
 
 convertBtn.addEventListener("click", convert);

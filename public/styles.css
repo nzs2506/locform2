@@ -174,13 +174,21 @@ textarea {
   border-bottom: 1px solid var(--line);
 }
 
-.key-tabs {
+.key-bar {
   display: flex;
+  align-items: center;
   gap: 6px;
   min-height: 50px;
   padding: 10px 12px;
-  overflow-x: auto;
   border-bottom: 1px solid var(--line);
+}
+
+.key-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .key-tab {
@@ -201,6 +209,12 @@ textarea {
   align-self: center;
   color: var(--muted);
   font-size: 13px;
+}
+
+.key-copy {
+  flex: 0 0 auto;
+  color: var(--green-dark);
+  font-weight: 700;
 }
 
 .tab.active {
@@ -232,6 +246,19 @@ textarea {
 .result-head button {
   color: var(--green-dark);
   font-weight: 700;
+}
+
+.result-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.topic-key-copy {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .result textarea {
