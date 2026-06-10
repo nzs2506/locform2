@@ -39,17 +39,26 @@ function restoreAllowedTags(value) {
     .replace(/&lt;(\/?)b&gt;/g, "<$1b>")
     .replace(/&lt;(\/?)i&gt;/g, "<$1i>")
     .replace(/&lt;(\/?)u&gt;/g, "<$1u>")
-    .replace(/&lt;a href="([^"]+)"&gt;/g, '<a href="$1">')
+    .replace(/&lt;a href="([^"]+)" target="_blank"&gt;/g, (_, href) => `<a href="${href.replace(/&amp;/g, "&")}" target="_blank">`)
+    .replace(/&lt;a href="([^"]+)"&gt;/g, (_, href) => `<a href="${href.replace(/&amp;/g, "&")}">`)
     .replace(/&lt;\/a&gt;/g, "</a>")
     .replace(/&lt;br&gt;/g, "<br>")
     .replace(/&lt;br\/&gt;/g, "<br>");
 }
 
+function absoluteInlineHref(href) {
+  const value = String(href || "").replace(/&amp;/g, "&").trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^\/casino\/categories\//i.test(value)) return `https://new.marathonbet.com/es${value}`;
+  if (value.startsWith("/")) return `https://new.marathonbet.com${value}`;
+  return value;
+}
+
 function inlineLinkHtml(href, label) {
-  const safeHref = String(href || "").replace(/"/g, "%22").replace(/&amp;/g, "&");
+  const safeHref = absoluteInlineHref(href).replace(/"/g, "%22");
   const cleanLabel = String(label || "").replace(/<[^>]+>/g, "").trim();
   if (!cleanLabel || cleanLabel === safeHref) return safeHref;
-  return `<u><i><a href="${safeHref}">${cleanLabel}</a></i></u>`;
+  return `<a href="${safeHref}" target="_blank"><i><u>${cleanLabel}</u></i></a>`;
 }
 
 function escapeRegExp(value) {
@@ -197,6 +206,13 @@ function normalizeBold(value) {
     .replace(/__(.+?)__/g, "<b>$1</b>");
 }
 
+function removeTinyBoldTags(value) {
+  return String(value || "").replace(/<b>([\s\S]*?)<\/b>/gi, (match, inner) => {
+    const plain = stripTags(inner).replace(/&nbsp;/g, " ").trim();
+    return plain.length < 3 ? inner : match;
+  });
+}
+
 function balanceInlineTags(value) {
   let html = String(value || "");
 
@@ -222,7 +238,7 @@ function balanceInlineTags(value) {
 }
 
 function formatInline(line) {
-  const escaped = restoreAllowedTags(escapeHtml(normalizeBold(line.trim())));
+  const escaped = restoreAllowedTags(escapeHtml(removeTinyBoldTags(normalizeBold(line.trim()))));
   return applyNbsp(balanceInlineTags(escaped));
 }
 
@@ -327,7 +343,17 @@ function parseNotifications(text) {
 
     if (isServiceKeyLine(raw)) {
       if (/\.topic$/i.test(plain)) {
-        awaitingTopicFor = serviceKeyBase(plain);
+        const baseKey = serviceKeyBase(plain);
+        if (topics[topicKey(baseKey, language)] || topics[topicKey(baseKey, "")]) {
+          save();
+          key = baseKey;
+          body = [];
+          awaitingTopicFor = "";
+          awaitingTopicLanguage = "";
+          continue;
+        }
+
+        awaitingTopicFor = baseKey;
         awaitingTopicLanguage = language;
         continue;
       }
@@ -899,10 +925,10 @@ function applyDocxInlineLinkHints(text, hints = []) {
   if (!hints.length) return text;
 
   return String(text || "").split("\n").map((line) => {
-    const chunks = line.split(/(<u><i><a href="[^"]+">[\s\S]*?<\/a><\/i><\/u>)/g);
+    const chunks = line.split(/(<a href="[^"]+"(?: target="_blank")?>[\s\S]*?<\/a>)/g);
 
     return chunks.map((chunk) => {
-      if (/^<u><i><a href=/.test(chunk)) return chunk;
+      if (/^<a href=/.test(chunk)) return chunk;
 
       return hints
         .slice()
@@ -1000,6 +1026,12 @@ function renderSegments(version, segments) {
     if (!html) continue;
 
     const previous = segments[index - 1];
+    if ((version === "compact" || version === "mobile") && segment.type === "button") {
+      if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
+      rendered.push(html);
+      continue;
+    }
+
     const separator = previous?.type === "line" && segment.type === "line" ? "<br>\n" : "\n\n";
     if (rendered.length && rendered[rendered.length - 1] !== "<br><br>") rendered.push(separator);
     rendered.push(html);
