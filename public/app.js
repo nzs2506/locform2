@@ -617,7 +617,119 @@ function htmlPasteToPlainText(html) {
 
 window.htmlPasteToPlainText = htmlPasteToPlainText;
 
-function normalizeDocxHtml(html) {
+function wordColorKind(value) {
+  const color = String(value || "").replace(/^#/, "").toLowerCase();
+  if (!color || color === "auto") return null;
+  if (color === "green" || /^(?:07974d|01b462|008000|00a000|00b050|92d050|70ad47)$/.test(color)) return "green";
+  if (color === "white" || color === "ffffff") return "white";
+  return null;
+}
+
+function xmlChildrenByLocalName(node, localName) {
+  return [...node.getElementsByTagName("*")].filter((child) => child.localName === localName);
+}
+
+function runText(run) {
+  return xmlChildrenByLocalName(run, "t").map((node) => node.textContent || "").join("");
+}
+
+function runHighlightColor(run) {
+  const rPr = xmlChildrenByLocalName(run, "rPr")[0];
+  if (!rPr) return null;
+
+  const highlight = xmlChildrenByLocalName(rPr, "highlight")[0];
+  const highlightColor = wordColorKind(highlight?.getAttribute("w:val") || highlight?.getAttribute("val"));
+  if (highlightColor) return highlightColor;
+
+  const shading = xmlChildrenByLocalName(rPr, "shd")[0];
+  return wordColorKind(shading?.getAttribute("w:fill") || shading?.getAttribute("fill"));
+}
+
+function pushHighlightHint(hints, text, color) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean || !color) return;
+  hints.push({ text: clean, color });
+}
+
+async function extractDocxHighlightHints(arrayBuffer) {
+  if (typeof JSZip === "undefined") return [];
+
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const documentFile = zip.file("word/document.xml");
+  if (!documentFile) return [];
+
+  const xmlText = await documentFile.async("string");
+  const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+  const paragraphs = [...xml.getElementsByTagName("*")].filter((node) => node.localName === "p");
+  const hints = [];
+
+  paragraphs.forEach((paragraph) => {
+    const combined = { green: "", white: "" };
+    let activeColor = null;
+    let activeText = "";
+
+    xmlChildrenByLocalName(paragraph, "r").forEach((run) => {
+      const text = runText(run);
+      const color = runHighlightColor(run);
+      if (!text) return;
+
+      if (color === "green" || color === "white") {
+        combined[color] += text;
+        if (activeColor === color) activeText += text;
+        else {
+          pushHighlightHint(hints, activeText, activeColor);
+          activeColor = color;
+          activeText = text;
+        }
+        return;
+      }
+
+      pushHighlightHint(hints, activeText, activeColor);
+      activeColor = null;
+      activeText = "";
+    });
+
+    pushHighlightHint(hints, activeText, activeColor);
+    pushHighlightHint(hints, combined.green, "green");
+    pushHighlightHint(hints, combined.white, "white");
+  });
+
+  const seen = new Set();
+  return hints.filter((hint) => {
+    const key = `${hint.color}:${hint.text.toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function looseTextKey(value) {
+  return stripTags(value).toLowerCase().replace(/&nbsp;/g, " ").replace(/[\s'’`.,:;!?()[\]{}"«»<>|\\/-]+/g, "");
+}
+
+function matchingHighlightHint(line, hints) {
+  const lineKey = looseTextKey(line);
+  return hints
+    .filter((hint) => hint.color === "green" || hint.color === "white")
+    .filter((hint) => looseTextKey(hint.text).length >= 3)
+    .sort((a, b) => looseTextKey(b.text).length - looseTextKey(a.text).length)
+    .find((hint) => lineKey.includes(looseTextKey(hint.text)));
+}
+
+function applyDocxHighlightButtonHints(text, hints = []) {
+  if (!hints.length) return text;
+
+  return String(text || "").split("\n").map((line) => {
+    if (!/\(((?:https?:\/\/|\/)[^)]+)\)/i.test(line) || isButtonLine(line)) return line;
+    const hint = matchingHighlightHint(line, hints);
+    if (!hint) return line;
+
+    const label = line.replace(/^(?:кнопка|button)\s*:?\s*/iu, "");
+    return `${hint.color === "green" ? "Кнопка зеленая" : "Кнопка белая"}: ${label}`;
+  }).join("\n");
+}
+
+function normalizeDocxHtml(html, highlightHints = []) {
   let text = String(html || "");
 
   text = text.replace(/&amp;/g, "&");
@@ -641,6 +753,8 @@ function normalizeDocxHtml(html) {
     .replace(/<(?!\/?(?:b|i)\b)[^>]+>/gi, "");
 
   text = text.replace(/(?:<b>)?(message\.service(?:\.(?!topic\b)[a-z0-9_-]+)+(?:\.topic)?)(?:<\/b>)?\s*/gi, "\n$1\n");
+
+  text = applyDocxHighlightButtonHints(text, highlightHints);
 
   return normalizeButtonBlocks(text);
 }
@@ -791,8 +905,12 @@ async function readDroppedFile(file) {
       return;
     }
 
-    const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
-    setSourceText(normalizeDocxHtml(result.value));
+    const arrayBuffer = await file.arrayBuffer();
+    const [highlightHints, result] = await Promise.all([
+      extractDocxHighlightHints(arrayBuffer.slice(0)).catch(() => []),
+      mammoth.convertToHtml({ arrayBuffer: arrayBuffer.slice(0) }),
+    ]);
+    setSourceText(normalizeDocxHtml(result.value, highlightHints));
     return;
   }
 
