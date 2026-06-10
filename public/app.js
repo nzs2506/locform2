@@ -84,7 +84,7 @@ function normalizeInputText(value) {
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
     .replace(/(^|\n)\s*(?:<\/[bi]>\s*)+/gi, "$1")
-    .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s+button|White\\s+button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
+    .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
     .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords})([?&=/#\\w-])`, "giu"), "$1$2");
 }
@@ -105,7 +105,7 @@ function siteMarker(line) {
 }
 
 function isButtonLine(line) {
-  return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:/iu.test(stripTags(line));
+  return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:/iu.test(stripTags(line));
 }
 
 function splitSitePrefixedButton(line) {
@@ -120,7 +120,7 @@ function splitSitePrefixedButton(line) {
       : "";
   if (!marker) return null;
 
-  const button = plain.match(/(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:/iu);
+  const button = plain.match(/(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:/iu);
   if (!button || button.index === 0) return null;
 
   return { marker, button: plain.slice(button.index).trim() };
@@ -134,7 +134,7 @@ function normalizeButtonBlocks(value) {
   while (index < lines.length) {
     const line = lines[index];
     const plain = stripTags(line);
-    const marker = plain.match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:?\s*(.*)$/iu);
+    const marker = plain.match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
 
     if (!marker) {
       out.push(line);
@@ -542,7 +542,7 @@ function parseTextChunk(text) {
 }
 
 function extractSegments(input) {
-  const buttonPattern = /(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s+button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s+button)\s*:\s*([^\n(]+?)\s*\(((?:https?:\/\/|\/)[^)]+)\)/giu;
+  const buttonPattern = /(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:\s*([^\n(]+?)\s*\(((?:https?:\/\/|\/)[^)]+)\)/giu;
   const segments = [];
   let lastIndex = 0;
   let pendingButtons = [];
