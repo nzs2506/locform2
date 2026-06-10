@@ -26,6 +26,29 @@ const stableNames = [
   "Giros Gratis",
   "Ruedas de Premios Semanales",
 ];
+let dynamicStableNames = [];
+
+const nbspMarkerRe = /\u043d\u0435\u0440\u0430\u0437\u0440\u044b\u0432\u043d\u044b\u0435\s+\u043f\u0440\u043e\u0431\u0435\u043b\u044b/iu;
+
+function refreshDynamicStableNames(text) {
+  const seen = new Set(stableNames.map((name) => name.toLowerCase()));
+  const names = [];
+
+  String(text || "").split("\n").forEach((line) => {
+    const plain = stripTags(line).replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+    if (!nbspMarkerRe.test(plain)) return;
+
+    const [, rest = ""] = plain.split(/:(.*)/s);
+    rest.split(",").forEach((part) => {
+      const name = part.replace(/\s+/g, " ").trim();
+      if (name.length < 2 || seen.has(name.toLowerCase())) return;
+      seen.add(name.toLowerCase());
+      names.push(name);
+    });
+  });
+
+  dynamicStableNames = names;
+}
 
 function escapeHtml(value) {
   return value
@@ -79,8 +102,12 @@ function stripTags(value) {
   return String(value || "").replace(/<[^>]+>/g, "").trim();
 }
 
+function stripTagsWithSpaces(value) {
+  return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function normalizeInputText(value) {
-  const siteWords = "(?:old\\s*site|oldsite|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
+  const siteWords = "(?:old\\s*site|oldsite|old\\s*version|oldversion|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
   const buttonWords = "(?:Кнопка\\s*зел[её]ная|Зел[её]ная\\s+кнопка|Button\\s*green|Green\\s*button|Кнопка\\s*белая|Белая\\s+кнопка|Button\\s*white|White\\s*button)";
   return String(value || "")
     .replace(/\r\n?/g, "\n")
@@ -93,9 +120,9 @@ function normalizeInputText(value) {
 }
 
 function siteMarker(line) {
-  const plain = stripTags(line).toLowerCase();
+  const plain = stripTagsWithSpaces(line).toLowerCase();
   const compact = plain.replace(/[\s._-]+/g, "");
-  if (compact === "oldsite" || compact === "старыйсайт") return "old";
+  if (compact === "oldsite" || compact === "oldversion" || compact === "старыйсайт") return "old";
   if (
     compact === "redesignsite" ||
     compact === "redesign" ||
@@ -105,6 +132,32 @@ function siteMarker(line) {
     compact === "новыйсайт"
   ) return "redesign";
   return "";
+}
+
+function splitSitePrefix(line) {
+  const plain = stripTagsWithSpaces(line);
+  const lower = plain.toLowerCase();
+  const aliases = [
+    ["redesign site", "redesign"],
+    ["redesignsite", "redesign"],
+    ["new version", "redesign"],
+    ["newversion", "redesign"],
+    ["new site", "redesign"],
+    ["newsite", "redesign"],
+    ["redesign", "redesign"],
+    ["old version", "old"],
+    ["oldversion", "old"],
+    ["old site", "old"],
+    ["oldsite", "old"],
+  ];
+
+  for (const [alias, marker] of aliases) {
+    if (lower.startsWith(alias)) {
+      return { marker, rest: plain.slice(alias.length).trim() };
+    }
+  }
+
+  return null;
 }
 
 function isButtonLine(line) {
@@ -134,6 +187,49 @@ function normalizeButtonBlocks(value) {
   const out = [];
   let index = 0;
 
+  function buildButtonLine(label, rest, nextLine) {
+    const cleanRest = stripTags(rest);
+    const inlineUrl = cleanRest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[\s\S]+?)\)?\s*$/iu);
+    if (inlineUrl) {
+      return { line: `${label}: ${inlineUrl[1].trim()} (${cleanUrl(inlineUrl[2])})`, consumedNext: false };
+    }
+
+    const inlinePlainUrl = cleanRest.match(/^(.+?)\s+((?:https?:\/\/|\/)\S+)\s*$/iu);
+    if (inlinePlainUrl) {
+      return { line: `${label}: ${inlinePlainUrl[1].trim()} (${cleanUrl(inlinePlainUrl[2])})`, consumedNext: false };
+    }
+
+    const url = stripTags(nextLine || "");
+    if (cleanRest && /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url)) {
+      return { line: `${label}: ${cleanRest} (${cleanUrl(url)})`, consumedNext: true };
+    }
+
+    return null;
+  }
+
+  function pushSiteButton(label, site, next) {
+    const canonicalMarker = site.marker === "old" ? "Old version" : "redesign";
+    if (!site.rest && next < lines.length) {
+      let labelIndex = next;
+      while (labelIndex < lines.length && !stripTags(lines[labelIndex])) labelIndex += 1;
+      if (labelIndex >= lines.length) return null;
+
+      const built = buildButtonLine(label, lines[labelIndex], lines[labelIndex + 1]);
+      if (!built) return null;
+
+      out.push(canonicalMarker);
+      out.push(built.line);
+      return labelIndex + (built.consumedNext ? 2 : 1);
+    }
+
+    const built = buildButtonLine(label, site.rest, lines[next]);
+    if (!built) return null;
+
+    out.push(canonicalMarker);
+    out.push(built.line);
+    return next + (built.consumedNext ? 1 : 0);
+  }
+
   while (index < lines.length) {
     const line = lines[index];
     const plain = stripTags(line);
@@ -148,25 +244,65 @@ function normalizeButtonBlocks(value) {
     const label = marker[1];
     let rest = marker[2].trim();
     let next = index + 1;
+    let consumedSiteButtons = false;
 
-    const inlineUrl = rest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[^\n]+?)\)?\s*$/iu);
-    if (inlineUrl) {
-      out.push(`${label}: ${inlineUrl[1].trim()} (${cleanUrl(inlineUrl[2])})`);
-      index += 1;
-      continue;
+    const prefixedRest = splitSitePrefix(rest);
+    if (prefixedRest) {
+      const consumed = pushSiteButton(label, prefixedRest, next);
+      if (consumed !== null) {
+        index = consumed;
+        consumedSiteButtons = true;
+      }
+    } else {
+      const built = buildButtonLine(label, rest, lines[next]);
+      if (built) {
+        out.push(built.line);
+        index += built.consumedNext ? 2 : 1;
+        continue;
+      }
     }
 
-    const inlinePlainUrl = rest.match(/^(.+?)\s+((?:https?:\/\/|\/)\S+)\s*$/iu);
-    if (inlinePlainUrl) {
-      out.push(`${label}: ${inlinePlainUrl[1].trim()} (${cleanUrl(inlinePlainUrl[2])})`);
-      index += 1;
+    while (consumedSiteButtons) {
+      while (index < lines.length && !stripTags(lines[index])) index += 1;
+      const site = splitSitePrefix(lines[index]);
+      if (!site) break;
+      const consumed = pushSiteButton(label, site, index + 1);
+      if (consumed === null) break;
+      index = consumed;
+    }
+
+    if (consumedSiteButtons) {
       continue;
     }
 
     while (next < lines.length && !stripTags(lines[next])) next += 1;
 
     if (!rest && next < lines.length) {
+      const site = splitSitePrefix(lines[next]);
+      if (site) {
+        const consumed = pushSiteButton(label, site, next + 1);
+        if (consumed !== null) {
+          index = consumed;
+          consumedSiteButtons = true;
+          while (index < lines.length) {
+            while (index < lines.length && !stripTags(lines[index])) index += 1;
+            const repeatedSite = splitSitePrefix(lines[index]);
+            if (!repeatedSite) break;
+            const repeatedConsumed = pushSiteButton(label, repeatedSite, index + 1);
+            if (repeatedConsumed === null) break;
+            index = repeatedConsumed;
+          }
+          continue;
+        }
+      }
+
       rest = stripTags(lines[next]);
+      const built = buildButtonLine(label, rest, lines[next + 1]);
+      if (built) {
+        out.push(built.line);
+        index = next + (built.consumedNext ? 2 : 1);
+        continue;
+      }
       next += 1;
     }
 
@@ -188,7 +324,7 @@ function normalizeButtonBlocks(value) {
   return out.join("\n");
 }
 
-function applyNbsp(value) {
+function applyNbsp(value, includeDynamic = true) {
   let html = value;
 
   html = html.replace(/\b(\d{1,3}(?:[ \u00a0]\d{3})+)\b/g, (match) => match.replace(/[ \u00a0]/g, "&nbsp;"));
@@ -197,7 +333,8 @@ function applyNbsp(value) {
   html = html.replace(/(\d+)\s+фриспинов/giu, "$1&nbsp;фриспинов");
   html = html.replace(/до\s+(\d+(?:&nbsp;\d{3})*&nbsp;(?:₽|руб\.?|BYN|UZS|USD|EUR|\$|€))/giu, "до&nbsp;$1");
 
-  for (const name of stableNames) {
+  const names = includeDynamic ? [...stableNames, ...dynamicStableNames] : stableNames;
+  for (const name of names) {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const escapedHtml = escaped.replace(" & ", " &amp; ");
     const replacement = name.replace(/ & /g, "&nbsp;&amp;&nbsp;").replace(/ /g, "&nbsp;");
@@ -328,6 +465,7 @@ function keyLabel(section) {
 }
 
 function parseNotifications(text) {
+  refreshDynamicStableNames(text);
   const lines = normalizeButtonBlocks(text).split("\n");
   const sections = [];
   const topics = {};
@@ -991,7 +1129,7 @@ function makeButtonHtml(version, buttons) {
 
   const green = buttons.find((button) => button.color === "green");
   const white = buttons.find((button) => button.color === "white");
-  const safeText = (value) => applyNbsp(restoreAllowedTags(escapeHtml(value)));
+  const safeText = (value) => applyNbsp(restoreAllowedTags(escapeHtml(value)), false);
 
   const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
   if (buttons.length > 2 || hasDuplicateColors) {
