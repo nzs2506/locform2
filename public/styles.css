@@ -248,10 +248,10 @@ textarea {
   font-weight: 700;
 }
 
-.result-title {
+.result-actions {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 8px;
 }
 

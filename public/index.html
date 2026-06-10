@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 2.3</title>
+  <title>LOCform 2.4</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -13,7 +13,7 @@
       <div class="editor-pane" id="dropZone">
         <div class="pane-head">
           <div>
-            <h1>LOCform 2.3</h1>
+            <h1>LOCform 2.4</h1>
             <span>Web, Mobile, Redesign</span>
           </div>
           <button id="convertBtn" type="button">Преобразовать</button>
@@ -48,11 +48,11 @@
 
         <section class="result active" data-panel="topic">
           <div class="result-head">
-            <div class="result-title">
-              <h2>Topic</h2>
+            <h2>Topic</h2>
+            <div class="result-actions">
               <button id="copyTopicKeyBtn" class="topic-key-copy" type="button" disabled>Скопировать ключ</button>
+              <button type="button" data-copy="topic">Копировать</button>
             </div>
-            <button type="button" data-copy="topic">Копировать</button>
           </div>
           <textarea id="topicOutput" spellcheck="false"></textarea>
         </section>
