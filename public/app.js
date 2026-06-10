@@ -1060,5 +1060,5 @@ Object.values(outputs).forEach((output) => {
   output.addEventListener("input", updatePreview);
 });
 
-sourceText.value = `Солидный бонус за депозит от 10 BYN: 1. В течение 3 дней нажмите кнопку «Участвовать» на странице предложения. 2. Пополните игровой счёт на сумму от 10 BYN. 3. Получите 200 фриспинов в игре Wisdom of Athena 1000 от Pragmatic Play. Междустрочный интервал Кнопка зеленая: За бонусом (/promotions/promotion/401?utm_medium=an&utm_source=crm&utm_campaign=MCMS-281401~MED&utm_term=Promo&utm_content=bel) Междустрочный интервал Прокрутите фриспины в течение 2 дней, отыграйте выигрыш с них 30 раз и переводите до 250 BYN на основной баланс!`;
+sourceText.value = "Вот сюда добавьте какой-то текст, вы же не просто так сюда пришли";
 convert();
