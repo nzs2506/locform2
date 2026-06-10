@@ -81,13 +81,15 @@ function stripTags(value) {
 
 function normalizeInputText(value) {
   const siteWords = "(?:old\\s*site|oldsite|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
+  const buttonWords = "(?:Кнопка\\s*зел[её]ная|Зел[её]ная\\s+кнопка|Button\\s*green|Green\\s*button|Кнопка\\s*белая|Белая\\s+кнопка|Button\\s*white|White\\s*button)";
   return String(value || "")
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
     .replace(/(^|\n)\s*(?:<\/[bi]>\s*)+/gi, "$1")
+    .replace(new RegExp(`((?:https?:\\/\\/|\\/)[^\\n\\s]+?)(?=${buttonWords}\\s*:?)`, "giu"), "$1\n")
     .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
-    .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords})([?&=/#\\w-])`, "giu"), "$1$2");
+    .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords}|${buttonWords}\\s*:?)([?&=/#\\w-])`, "giu"), "$1$2");
 }
 
 function siteMarker(line) {
