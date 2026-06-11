@@ -1146,7 +1146,7 @@ function makeButtonHtml(version, buttons) {
   const white = buttons.find((button) => button.color === "white");
   const safeText = (value) => applyNbsp(restoreAllowedTags(escapeHtml(value)), false);
   const visibleLength = (value) => stripTagsWithSpaces(value).length;
-  const compactSize = (button) => (visibleLength(button.text) > 15 ? "width: 180px; height: 35px;" : "width: 140px; height: 25px;");
+  const compactSize = (button) => (visibleLength(button.text) > 18 ? "width: 180px; height: 35px;" : "width: 140px; height: 25px;");
 
   const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
   if (buttons.length > 2 || hasDuplicateColors) {
