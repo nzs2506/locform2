@@ -109,6 +109,18 @@ function stripTagsWithSpaces(value) {
   return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function plainOutputText(value) {
+  return stripTagsWithSpaces(value)
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeInputText(value) {
   const siteWords = "(?:old\\s*site|oldsite|old\\s*version|oldversion|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
   const buttonWords = "(?:Кнопка\\s*зел[её]ная|Зел[её]ная\\s+кнопка|Button\\s*green|Green\\s*button|Кнопка\\s*белая|Белая\\s+кнопка|Button\\s*white|White\\s*button)";
@@ -119,7 +131,7 @@ function normalizeInputText(value) {
     .replace(new RegExp(`((?:https?:\\/\\/|\\/)[^\\n\\s]+?)(?=${buttonWords}\\s*:?)`, "giu"), "$1\n")
     .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
-    .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords}|${buttonWords}\\s*:?)([?&=/#\\w-])`, "giu"), "$1$2");
+    .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords}|${buttonWords}\\s*:?|18\\+)([?&=/#\\w-])`, "giu"), "$1$2");
 }
 
 function siteMarker(line) {
@@ -164,13 +176,13 @@ function splitSitePrefix(line) {
 }
 
 function isButtonLine(line) {
-  return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:/iu.test(stripTags(line));
+  return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:/iu.test(stripTagsWithSpaces(line));
 }
 
 function splitSitePrefixedButton(line) {
-  const plain = stripTags(line);
+  const plain = stripTagsWithSpaces(line);
   const compact = plain.toLowerCase().replace(/[\s._-]+/g, "");
-  const oldPrefixes = ["oldsite", "старыйсайт"];
+  const oldPrefixes = ["oldsite", "oldversion", "старыйсайт"];
   const redesignPrefixes = ["redesignsite", "redesign", "newsite", "newversion", "редизайн", "новыйсайт"];
   const marker = oldPrefixes.some((prefix) => compact.startsWith(prefix))
     ? "old"
@@ -527,7 +539,7 @@ function parseNotifications(text) {
     }
 
     if (awaitingTopicFor && plain && !/неразрывные\s+пробелы/iu.test(plain)) {
-      topics[topicKey(awaitingTopicFor, awaitingTopicLanguage)] = formatInline(plain);
+      topics[topicKey(awaitingTopicFor, awaitingTopicLanguage)] = plainOutputText(raw);
       awaitingTopicFor = "";
       awaitingTopicLanguage = "";
       continue;
