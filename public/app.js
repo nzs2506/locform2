@@ -1145,6 +1145,8 @@ function makeButtonHtml(version, buttons) {
   const green = buttons.find((button) => button.color === "green");
   const white = buttons.find((button) => button.color === "white");
   const safeText = (value) => applyNbsp(restoreAllowedTags(escapeHtml(value)), false);
+  const visibleLength = (value) => stripTagsWithSpaces(value).length;
+  const compactSize = (button) => (visibleLength(button.text) > 15 ? "width: 180px; height: 35px;" : "width: 140px; height: 25px;");
 
   const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
   if (buttons.length > 2 || hasDuplicateColors) {
@@ -1153,7 +1155,7 @@ function makeButtonHtml(version, buttons) {
       const margin = index ? (version === "compact" ? "\n\n  " : "\n\n  ") : "";
 
       if (version === "compact") {
-        return `${margin}<a href="${button.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 140px; height: 25px; padding: 0 12px;\n            background-color: ${isWhite ? "transparent" : "#07974D"}; color: ${isWhite ? "#07974D" : "#FFFFFF"}; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: ${isWhite ? "1px solid #07974D" : "none"};">\n    ${safeText(button.text)}\n  </a>`;
+        return `${margin}<a href="${button.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            ${compactSize(button)} padding: 0 12px;\n            background-color: ${isWhite ? "transparent" : "#07974D"}; color: ${isWhite ? "#07974D" : "#FFFFFF"}; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: ${isWhite ? "1px solid #07974D" : "none"};">\n    ${safeText(button.text)}\n  </a>`;
       }
 
       if (version === "mobile") {
@@ -1170,7 +1172,7 @@ function makeButtonHtml(version, buttons) {
 
   if (!green && white) {
     if (version === "compact") {
-      return `<div style="display: inline-flex; gap: 8px;">\n  <a href="${white.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 140px; height: 25px; padding: 0 12px;\n            background-color: transparent; color: #07974D; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: 1px solid #07974D;">\n    ${safeText(white.text)}\n  </a>\n</div>`;
+      return `<div style="display: inline-flex; gap: 8px;">\n  <a href="${white.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            ${compactSize(white)} padding: 0 12px;\n            background-color: transparent; color: #07974D; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: 1px solid #07974D;">\n    ${safeText(white.text)}\n  </a>\n</div>`;
     }
 
     if (version === "mobile") {
@@ -1182,7 +1184,7 @@ function makeButtonHtml(version, buttons) {
 
   if (!white) {
     if (version === "compact") {
-      return `<div style="display: inline-flex; gap: 8px;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 140px; height: 25px; padding: 0 12px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none;">\n    ${safeText(green.text)}\n  </a>\n</div>`;
+      return `<div style="display: inline-flex; gap: 8px;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            ${compactSize(green)} padding: 0 12px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none;">\n    ${safeText(green.text)}\n  </a>\n</div>`;
     }
 
     if (version === "mobile") {
@@ -1193,7 +1195,7 @@ function makeButtonHtml(version, buttons) {
   }
 
   if (version === "compact") {
-    return `<div style="display: inline-flex; gap: 8px;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 140px; height: 25px; padding: 0 12px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none;">\n    ${safeText(green.text)}\n  </a>\n\n  <a href="${white.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 140px; height: 25px; padding: 0 12px;\n            background-color: transparent; color: #07974D; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: 1px solid #07974D;">\n    ${safeText(white.text)}\n  </a>\n</div>`;
+    return `<div style="display: inline-flex; gap: 8px;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            ${compactSize(green)} padding: 0 12px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none;">\n    ${safeText(green.text)}\n  </a>\n\n  <a href="${white.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            ${compactSize(white)} padding: 0 12px;\n            background-color: transparent; color: #07974D; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: 1px solid #07974D;">\n    ${safeText(white.text)}\n  </a>\n</div>`;
   }
 
   if (version === "mobile") {
