@@ -1219,7 +1219,7 @@ function renderSegments(version, segments) {
     if (!html) continue;
 
     const previous = segments[index - 1];
-    if ((version === "compact" || version === "mobile") && segment.type === "button") {
+    if ((version === "compact" || version === "mobile" || version === "pc") && segment.type === "button") {
       if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
       rendered.push(html);
       continue;
