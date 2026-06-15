@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.12</title>
+  <title>LOCform 3.8.13</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.12">
+  <link rel="stylesheet" href="styles.css?v=3.8.13">
 </head>
 <body>
   <main class="shell">
@@ -15,10 +15,10 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.12</h1>
+              <h1>LOCform 3.8.13</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
-            <span>Web, Mobile, Redesign</span>
+            <span>Web, Mobile, Redesign, Redesign MB6R</span>
           </div>
           <button id="convertBtn" type="button">Преобразовать</button>
         </div>
@@ -48,6 +48,7 @@
           <button class="tab" type="button" data-tab="compact">Web</button>
           <button class="tab" type="button" data-tab="mobile">Mobile</button>
           <button class="tab" type="button" data-tab="pc">Redesign</button>
+          <button class="tab" type="button" data-tab="pcMb6r">Redesign MB6R</button>
         </div>
 
         <section class="result active" data-panel="topic">
@@ -83,6 +84,14 @@
             <button type="button" data-copy="pc">Копировать</button>
           </div>
           <textarea id="pcOutput" spellcheck="false"></textarea>
+        </section>
+
+        <section class="result" data-panel="pcMb6r">
+          <div class="result-head">
+            <h2>Redesign MB6R</h2>
+            <button type="button" data-copy="pcMb6r">Копировать</button>
+          </div>
+          <textarea id="pcMb6rOutput" spellcheck="false"></textarea>
         </section>
       </div>
     </section>
@@ -136,6 +145,6 @@ https://go2m.biz/...url_web=en/promotions/promotion/1578...</code></pre>
     </section>
   </div>
 
-  <script src="app.js?v=3.8.12"></script>
+  <script src="app.js?v=3.8.13"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@ const outputs = {
   compact: document.querySelector("#compactOutput"),
   mobile: document.querySelector("#mobileOutput"),
   pc: document.querySelector("#pcOutput"),
+  pcMb6r: document.querySelector("#pcMb6rOutput"),
 };
 const keyTabs = document.querySelector("#keyTabs");
 const copyKeyBtn = document.querySelector("#copyKeyBtn");
@@ -1165,6 +1166,7 @@ function makeButtonHtml(version, buttons) {
   const safeText = (value) => applyNbsp(restoreAllowedTags(escapeHtml(value)), false);
   const visibleLength = (value) => stripTagsWithSpaces(value).length;
   const compactSize = (button) => (visibleLength(button.text) > 20 ? "width: 180px; height: 35px;" : "width: 140px; height: 25px;");
+  const redesignAccent = version === "pcMb6r" ? "#00B777" : "#01B462";
 
   const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
   if (buttons.length > 2 || hasDuplicateColors) {
@@ -1180,7 +1182,7 @@ function makeButtonHtml(version, buttons) {
         return `${margin}<a href="${button.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 361px; height: 40px; padding: 9px 24px;${index ? " margin-top: 6px;" : ""}\n            background-color: ${isWhite ? "transparent" : "#07974D"}; color: ${isWhite ? "#07974D" : "#FFFFFF"}; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: ${isWhite ? "1px solid #07974D" : "none"}; transform: rotate(0deg);">\n    ${safeText(button.text)}\n  </a>`;
       }
 
-      return `${margin}<a href="${button.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${isWhite ? "transparent" : "#01B462"}; color: ${isWhite ? "#01B462" : "#FFFFFF"}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: ${isWhite ? "2px solid #01B462" : "none"};">\n    ${safeText(button.text)}\n  </a>`;
+      return `${margin}<a href="${button.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${isWhite ? "transparent" : redesignAccent}; color: ${isWhite ? redesignAccent : "#FFFFFF"}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: ${isWhite ? `2px solid ${redesignAccent}` : "none"};">\n    ${safeText(button.text)}\n  </a>`;
     };
 
     if (version === "compact") return `<div style="display: inline-flex; gap: 8px;">\n  ${buttons.map(anchor).join("")}\n</div>`;
@@ -1197,7 +1199,7 @@ function makeButtonHtml(version, buttons) {
       return `<div style="display: flex; flex-direction: column;">\n  <a href="${white.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 361px; height: 40px; padding: 9px 24px;\n            background-color: transparent; color: #07974D; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: 1px solid #07974D; transform: rotate(0deg);">\n    ${safeText(white.text)}\n  </a>\n</div>`;
     }
 
-    return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  <a href="${white.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: transparent; color: #01B462; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: 2px solid #01B462;">\n    ${safeText(white.text)}\n  </a>\n\n</div>`;
+    return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  <a href="${white.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: transparent; color: ${redesignAccent}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: 2px solid ${redesignAccent};">\n    ${safeText(white.text)}\n  </a>\n\n</div>`;
   }
 
   if (!white) {
@@ -1209,7 +1211,7 @@ function makeButtonHtml(version, buttons) {
       return `<div style="display: flex; flex-direction: column;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 361px; height: 40px; padding: 9px 24px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none; transform: rotate(0deg);">\n    ${safeText(green.text)}\n  </a>\n</div>`;
     }
 
-    return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  <a href="${green.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: #01B462; color: #FFFFFF; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: none;">\n    ${safeText(green.text)}\n  </a>\n\n</div>`;
+    return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  <a href="${green.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${redesignAccent}; color: #FFFFFF; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: none;">\n    ${safeText(green.text)}\n  </a>\n\n</div>`;
   }
 
   if (version === "compact") {
@@ -1220,7 +1222,7 @@ function makeButtonHtml(version, buttons) {
     return `<div style="display: flex; flex-direction: column;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 361px; height: 40px; padding: 9px 24px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none; transform: rotate(0deg);">\n    ${safeText(green.text)}\n  </a>\n\n  <a href="${white.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            width: 361px; height: 40px; padding: 9px 24px; margin-top: 6px;\n            background-color: transparent; color: #07974D; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: 1px solid #07974D; transform: rotate(0deg);">\n    ${safeText(white.text)}\n  </a>\n</div>`;
   }
 
-  return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  <a href="${green.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: #01B462; color: #FFFFFF; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: none;">\n    ${safeText(green.text)}\n  </a>\n\n  <a href="${white.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: transparent; color: #01B462; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: 2px solid #01B462;">\n    ${safeText(white.text)}\n  </a>\n\n</div>`;
+  return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  <a href="${green.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${redesignAccent}; color: #FFFFFF; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: none;">\n    ${safeText(green.text)}\n  </a>\n\n  <a href="${white.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: transparent; color: ${redesignAccent}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: 2px solid ${redesignAccent};">\n    ${safeText(white.text)}\n  </a>\n\n</div>`;
 }
 
 function renderSegments(version, segments) {
@@ -1239,7 +1241,7 @@ function renderSegments(version, segments) {
     if (!html) continue;
 
     const previous = segments[index - 1];
-    if ((version === "compact" || version === "mobile" || version === "pc") && segment.type === "button") {
+    if ((version === "compact" || version === "mobile" || version === "pc" || version === "pcMb6r") && segment.type === "button") {
       if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
       rendered.push(html);
       continue;
@@ -1330,6 +1332,7 @@ function renderCurrentNotification() {
   outputs.compact.value = renderSegments("compact", oldSegments);
   outputs.mobile.value = renderSegments("mobile", oldSegments);
   outputs.pc.value = renderSegments("pc", redesignRenderSegments);
+  outputs.pcMb6r.value = renderSegments("pcMb6r", redesignRenderSegments);
 
   updatePreview();
 }
