@@ -1242,6 +1242,46 @@ function renderSegments(version, segments) {
   return rendered.join("").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+function redesignUrlFromOld(url) {
+  const raw = String(url || "").replace(/&amp;/g, "&").trim();
+  let parsed;
+
+  try {
+    parsed = new URL(raw, "https://locform.local");
+  } catch {
+    return raw;
+  }
+
+  const urlWeb = parsed.searchParams.get("url_web");
+  if (!urlWeb) return raw;
+
+  const cleanPath = urlWeb.trim();
+  if (!cleanPath || /^lps\//i.test(cleanPath.replace(/^\/+/, ""))) return raw;
+
+  const relativePath = `/${cleanPath
+    .replace(/^\/+/, "")
+    .replace(/^(?:en|su|ru|rus|uzb|uz|ar|arg|latam|lat|es|spa|esp)\//i, "")}`;
+
+  const params = new URLSearchParams(parsed.search);
+  params.delete("url_web");
+  const query = params.toString().replace(/\+/g, "%20");
+
+  return query ? `${relativePath}?${query}` : relativePath;
+}
+
+function deriveRedesignSegmentsFromOld(segments) {
+  return segments.map((segment) => {
+    if (segment.type !== "button") return segment;
+    return {
+      ...segment,
+      buttons: segment.buttons.map((button) => ({
+        ...button,
+        url: redesignUrlFromOld(button.url),
+      })),
+    };
+  });
+}
+
 function renderKeyTabs() {
   if (!parsedNotifications.length) {
     keyTabs.innerHTML = '<span class="key-empty">Ключи появятся после преобразования</span>';
@@ -1272,7 +1312,9 @@ function renderCurrentNotification() {
 
   const oldSegments = extractSegments(bodyForSite(section.body, "old"));
   const redesignSegments = extractSegments(bodyForSite(section.body, "redesign"));
-  const redesignRenderSegments = redesignSegments.some((segment) => segment.type === "button") ? redesignSegments : oldSegments;
+  const redesignRenderSegments = redesignSegments.some((segment) => segment.type === "button")
+    ? redesignSegments
+    : deriveRedesignSegmentsFromOld(oldSegments);
 
   outputs.compact.value = renderSegments("compact", oldSegments);
   outputs.mobile.value = renderSegments("mobile", oldSegments);
