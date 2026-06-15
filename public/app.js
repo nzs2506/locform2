@@ -457,6 +457,10 @@ function isServiceKeyLine(line) {
   return /^message\.service(?:\.[a-z0-9_-]+)+$/i.test(plain);
 }
 
+function isDiscardedServiceLabel(line) {
+  return /^(?:MB6R|MB3B|PC)$/i.test(plainOutputText(line));
+}
+
 function serviceKeyBase(key) {
   return key.replace(/\.topic$/i, "");
 }
@@ -503,6 +507,8 @@ function parseNotifications(text) {
   for (const raw of lines) {
     const plain = stripTags(raw);
     const nextLanguage = languageHeader(raw);
+
+    if (isDiscardedServiceLabel(raw)) continue;
 
     if (nextLanguage) {
       if (key) save();
