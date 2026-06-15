@@ -565,25 +565,32 @@ function bodyForSite(text, target) {
   const lines = normalizeButtonBlocks(text).split("\n");
   const out = [];
   let scope = "old";
+  let scopedButtonCluster = false;
 
   for (const line of lines) {
     const prefixed = splitSitePrefixedButton(line);
     if (prefixed) {
       if (prefixed.marker === target) out.push(prefixed.button);
       scope = "old";
+      scopedButtonCluster = false;
       continue;
     }
 
     const marker = siteMarker(line);
     if (marker) {
       scope = marker;
+      scopedButtonCluster = true;
       continue;
     }
 
     if (isButtonLine(line)) {
       if (scope === target) out.push(line);
-      scope = "old";
       continue;
+    }
+
+    if (scopedButtonCluster && stripTagsWithSpaces(line)) {
+      scope = "old";
+      scopedButtonCluster = false;
     }
 
     out.push(line);
