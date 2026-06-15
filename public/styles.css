@@ -208,7 +208,7 @@ textarea {
 
 .key-tabs {
   display: grid;
-  grid-template-columns: repeat(10, max-content);
+  grid-template-columns: repeat(8, max-content);
   flex: 1 1 auto;
   gap: 6px;
   min-width: 0;
