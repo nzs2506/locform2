@@ -199,7 +199,7 @@ textarea {
 
 .key-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-height: 50px;
   padding: 10px 12px;
@@ -207,11 +207,12 @@ textarea {
 }
 
 .key-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(10, max-content);
   flex: 1 1 auto;
   gap: 6px;
   min-width: 0;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .key-tab {
@@ -410,5 +411,9 @@ textarea {
   .editor-pane,
   .results-pane {
     min-height: 540px;
+  }
+
+  .key-tabs {
+    grid-template-columns: repeat(auto-fit, minmax(70px, max-content));
   }
 }
