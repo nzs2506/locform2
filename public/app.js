@@ -461,6 +461,10 @@ function isDiscardedServiceLabel(line) {
   return /^(?:MB6R|MB3B|PC)$/i.test(plainOutputText(line));
 }
 
+function isLineBreakInstruction(line) {
+  return /^\u041c\u0435\u0436\u0434\u0443\u0441\u0442\u0440\u043e\u0447\u043d\u044b\u0439\s+(?:\u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b|\u043f\u0440\u043e\u0431\u0435\u043b)$/iu.test(plainOutputText(line));
+}
+
 function serviceKeyBase(key) {
   return key.replace(/\.topic$/i, "");
 }
@@ -509,6 +513,7 @@ function parseNotifications(text) {
     const nextLanguage = languageHeader(raw);
 
     if (isDiscardedServiceLabel(raw)) continue;
+    if (isLineBreakInstruction(raw) && (awaitingTopicFor || (key && !body.some((line) => stripTagsWithSpaces(line))))) continue;
 
     if (nextLanguage) {
       if (key) save();
