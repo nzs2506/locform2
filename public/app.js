@@ -129,6 +129,7 @@ function normalizeInputText(value) {
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
     .replace(/(^|\n)\s*(?:<\/[bi]>\s*)+/gi, "$1")
+    .replace(new RegExp(`([^\\n])\\s*((?:<[^>]+>\\s*)*${buttonWords}(?:\\s*<\\/[^>]+>)*)\\s*(?=\\n|$)`, "giu"), "$1\n$2")
     .replace(new RegExp(`((?:https?:\\/\\/|\\/)[^\\n\\s]+?)(?=${buttonWords}\\s*:?)`, "giu"), "$1\n")
     .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
@@ -672,7 +673,7 @@ function parseTextChunk(text) {
   function flushList() {
     if (!listBuffer) return;
     const items = listBuffer.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-    segments.push({ type: "block", html: `<${listBuffer.type}>\n${items}\n</${listBuffer.type}>` });
+    segments.push({ type: "block", html: `<${listBuffer.type} style="margin-top: 0; margin-bottom: 0;">\n${items}\n</${listBuffer.type}>` });
     listBuffer = null;
   }
 
@@ -700,7 +701,7 @@ function parseTextChunk(text) {
       flushList();
       if (numbered.intro) segments.push({ type: "line", html: formatInline(numbered.intro) });
       const items = numbered.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-      segments.push({ type: "block", html: `<ol>\n${items}\n</ol>` });
+      segments.push({ type: "block", html: `<ol style="margin-top: 0; margin-bottom: 0;">\n${items}\n</ol>` });
       continue;
     }
 
@@ -1146,6 +1147,9 @@ function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
     .replace(/<\/em>/gi, "</i>")
     .replace(/<h[1-6][^>]*>/gi, "<b>")
     .replace(/<\/h[1-6]>/gi, "</b>\n")
+    .replace(/<li[^>]*>/gi, "\n- ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<\/?(?:ul|ol)[^>]*>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
     .replace(/<p[^>]*>/gi, "")
     .replace(/<(?!\/?(?:b|i|u|a)\b)[^>]+>/gi, "");
