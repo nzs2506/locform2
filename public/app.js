@@ -629,7 +629,8 @@ function bodyForSite(text, target) {
     }
 
     if (isButtonLine(line)) {
-      if (scope === target) out.push(line);
+      const redesignFallbackButton = target === "redesign" && scope === "old" && !scopedButtonCluster;
+      if (scope === target || redesignFallbackButton) out.push(line);
       continue;
     }
 
@@ -1318,7 +1319,7 @@ function redesignUrlFromOld(url) {
   return query ? `${relativePath}?${query}` : relativePath;
 }
 
-function deriveRedesignSegmentsFromOld(segments) {
+function normalizeRedesignSegments(segments) {
   return segments.map((segment) => {
     if (segment.type !== "button") return segment;
     return {
@@ -1362,8 +1363,8 @@ function renderCurrentNotification() {
   const oldSegments = extractSegments(bodyForSite(section.body, "old"));
   const redesignSegments = extractSegments(bodyForSite(section.body, "redesign"));
   const redesignRenderSegments = redesignSegments.some((segment) => segment.type === "button")
-    ? redesignSegments
-    : deriveRedesignSegmentsFromOld(oldSegments);
+    ? normalizeRedesignSegments(redesignSegments)
+    : normalizeRedesignSegments(oldSegments);
 
   outputs.compact.value = renderSegments("compact", oldSegments);
   outputs.mobile.value = renderSegments("mobile", oldSegments);
