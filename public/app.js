@@ -109,10 +109,6 @@ function cleanUrl(raw) {
     .replace(/\s+/g, "");
 }
 
-function cleanMatchedUrl(raw) {
-  return cleanUrl(String(raw || "").replace(/\)+$/g, ""));
-}
-
 function stripTags(value) {
   return String(value || "").replace(/<[^>]+>/g, "").trim();
 }
@@ -140,9 +136,6 @@ function normalizeInputText(value) {
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
     .replace(/(^|\n)\s*(?:<\/[bi]>\s*)+/gi, "$1")
-    .replace(new RegExp(`(^|\\n)[^\\S\\n]*(${buttonWords})[^\\S\\n]*:?[^\\S\\n]*(\\S)`, "giu"), "$1$2:\n$3")
-    .replace(new RegExp(`(^|\\n)[^\\S\\n]*(${siteWords})[^\\S\\n]*:?[^\\S\\n]*((?:https?:\\/\\/|\\/)[^\\n\\s]+)`, "giu"), "$1$2\n$3")
-    .replace(new RegExp(`(^|\\n)[^\\S\\n]*(${siteWords})[^\\S\\n]*:?[^\\S\\n]*(?=${buttonWords})`, "giu"), "$1$2\n")
     .replace(new RegExp(`([^\\n])\\s*((?:<[^>]+>\\s*)*${buttonWords}(?:\\s*<\\/[^>]+>)*)\\s*(?=\\n|$)`, "giu"), "$1\n$2")
     .replace(new RegExp(`((?:https?:\\/\\/|\\/)[^\\n\\s]+?)(?=${buttonWords}\\s*:?)`, "giu"), "$1\n")
     .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
@@ -152,7 +145,7 @@ function normalizeInputText(value) {
 
 function siteMarker(line) {
   const plain = stripTagsWithSpaces(line).toLowerCase();
-  const compact = plain.replace(/[:：]+$/g, "").replace(/[\s._-]+/g, "");
+  const compact = plain.replace(/[\s._-]+/g, "");
   if (compact === "oldsite" || compact === "oldversion" || compact === "старыйсайт") return "old";
   if (
     compact === "redesignsite" ||
@@ -184,7 +177,7 @@ function splitSitePrefix(line) {
 
   for (const [alias, marker] of aliases) {
     if (lower.startsWith(alias)) {
-      return { marker, rest: plain.slice(alias.length).replace(/^[:：]\s*/, "").trim() };
+      return { marker, rest: plain.slice(alias.length).trim() };
     }
   }
 
@@ -248,67 +241,6 @@ function parseButtonBlockAt(lines, index) {
   };
 }
 
-function parseSiteUrlGroupAt(lines, index) {
-  const variants = [];
-  let cursor = index;
-
-  while (cursor < lines.length) {
-    while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
-
-    const site = splitSitePrefix(lines[cursor] || "");
-    if (!site) break;
-
-    let urls = String(site.rest || "").match(/(?:https?:\/\/|\/)\S+/giu) || [];
-    let consumedLines = 1;
-
-    if (!urls.length) {
-      const urlLine = stripTags(lines[cursor + 1] || "");
-      urls = urlLine.match(/(?:https?:\/\/|\/)\S+/giu) || [];
-      if (urls.length) consumedLines = 2;
-    }
-
-    if (!urls.length) break;
-
-    if (site.marker === "redesign" && urls.length >= 2) {
-      variants.push({ marker: "redesign", url: cleanMatchedUrl(urls[0]) });
-      variants.push({ marker: "old", url: cleanMatchedUrl(urls[1]) });
-    } else {
-      variants.push({ marker: site.marker, url: cleanMatchedUrl(urls[0]) });
-    }
-
-    cursor += consumedLines;
-  }
-
-  return variants.length ? { variants, nextIndex: cursor } : null;
-}
-
-function parseButtonWithTrailingSitesAt(lines, index) {
-  const marker = matchButtonMarker(lines[index] || "");
-  if (!marker) return null;
-
-  const markerLabel = marker[1];
-  let labelText = marker[2].trim();
-  let cursor = index + 1;
-
-  if (!labelText) {
-    while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
-    const candidate = stripTags(lines[cursor] || "");
-    if (!candidate || /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(candidate) || siteMarker(candidate) || splitSitePrefix(candidate)) return null;
-    labelText = candidate;
-    cursor += 1;
-  }
-
-  const siteGroup = parseSiteUrlGroupAt(lines, cursor);
-  if (!siteGroup) return null;
-
-  return {
-    marker: markerLabel,
-    text: labelText,
-    variants: siteGroup.variants,
-    nextIndex: siteGroup.nextIndex,
-  };
-}
-
 function normalizeButtonBlocks(value) {
   const lines = normalizeInputText(value).split("\n");
   const out = [];
@@ -323,15 +255,6 @@ function normalizeButtonBlocks(value) {
     out.push(`${label}:`);
     out.push(text);
     out.push(`(${cleanUrl(url)})`);
-  }
-
-  function pushTrailingSiteButton(label, text, siteGroup) {
-    out.push(`${label}:`);
-    out.push(text);
-    siteGroup.variants.forEach((variant) => {
-      out.push(variant.marker === "old" ? "Old version" : "redesign");
-      out.push(`(${variant.url})`);
-    });
   }
 
   function parseEmbeddedSiteUrlLine(value) {
@@ -410,10 +333,40 @@ function normalizeButtonBlocks(value) {
   }
 
   function pushLabeledSiteButtons(label, buttonText, startIndex) {
-    const siteGroup = parseSiteUrlGroupAt(lines, startIndex);
-    if (!siteGroup) return null;
-    pushTrailingSiteButton(label, buttonText, siteGroup);
-    return siteGroup.nextIndex;
+    let cursor = startIndex;
+    let consumedAny = false;
+
+    while (cursor < lines.length) {
+      while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
+
+      const site = splitSitePrefix(lines[cursor] || "");
+      if (!site) break;
+
+      let urls = splitMultipleUrls(site.rest);
+      let consumedLines = 1;
+
+      if (!urls.length) {
+        urls = splitMultipleUrls(stripTags(lines[cursor + 1] || ""));
+        if (urls.length) consumedLines = 2;
+      }
+
+      if (!urls.length) break;
+
+      if (site.marker === "redesign" && urls.length >= 2) {
+        out.push("redesign");
+        pushExpandedButton(label, buttonText, urls[0]);
+        out.push("Old version");
+        pushExpandedButton(label, buttonText, urls[1]);
+      } else {
+        out.push(site.marker === "old" ? "Old version" : "redesign");
+        pushExpandedButton(label, buttonText, urls[0]);
+      }
+
+      cursor += consumedLines;
+      consumedAny = true;
+    }
+
+    return consumedAny ? cursor : null;
   }
 
   while (index < lines.length) {
@@ -473,13 +426,6 @@ function normalizeButtonBlocks(value) {
         consumedSiteButtons = true;
       }
     } else {
-      const siteGroup = rest ? parseSiteUrlGroupAt(lines, next) : null;
-      if (siteGroup) {
-        pushTrailingSiteButton(label, rest, siteGroup);
-        index = siteGroup.nextIndex;
-        continue;
-      }
-
       const built = buildButtonLine(label, rest, lines[next]);
       if (built) {
         pushExpandedButton(label, built.text, built.url);
@@ -566,7 +512,7 @@ function normalizeButtonBlocks(value) {
     if (rest && next < lines.length) {
       const url = stripTags(lines[next]);
       if (/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url)) {
-        pushExpandedButton(label, rest, cleanUrl(url));
+        out.push(`${label}: ${rest} (${cleanUrl(url)})`);
         index = next + 1;
         continue;
       }
@@ -834,20 +780,6 @@ function bodyForSite(text, target) {
       scope = marker;
       scopedButtonCluster = true;
       index += 1;
-      continue;
-    }
-
-    const trailingSiteButton = parseButtonWithTrailingSitesAt(lines, index);
-    if (trailingSiteButton) {
-      trailingSiteButton.variants
-        .filter((variant) => variant.marker === target)
-        .forEach((variant) => {
-          out.push(`${trailingSiteButton.marker}: ${trailingSiteButton.text} (${variant.url})`);
-        });
-
-      scope = "";
-      scopedButtonCluster = false;
-      index = trailingSiteButton.nextIndex;
       continue;
     }
 
