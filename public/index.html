@@ -3,19 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.17</title>
+  <title>LOCform 3.8.18</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.17">
+  <link rel="stylesheet" href="styles.css?v=3.8.18">
 </head>
 <body>
-  <main class="shell">
+  <div id="authGate" class="auth-backdrop" hidden>
+    <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <h2 id="authTitle">Вход в LOCform</h2>
+      <p>Введите пароль, чтобы открыть сервис.</p>
+      <form id="authForm" class="auth-form">
+        <input id="authPassword" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Пароль">
+        <button type="submit">Открыть</button>
+      </form>
+      <p id="authError" class="auth-error" hidden>Неверный пароль</p>
+    </section>
+  </div>
+
+  <main class="shell" id="appShell" hidden>
     <section class="top-grid">
       <div class="editor-pane" id="dropZone">
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.17</h1>
+              <h1>LOCform 3.8.18</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R</span>
@@ -154,6 +166,6 @@ redesign
     </section>
   </div>
 
-  <script src="app.js?v=3.8.17"></script>
+  <script src="app.js?v=3.8.18"></script>
 </body>
 </html>

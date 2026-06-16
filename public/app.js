@@ -18,8 +18,15 @@ const guideBtn = document.querySelector("#guideBtn");
 const guideModal = document.querySelector("#guideModal");
 const guideCloseBtn = document.querySelector("#guideCloseBtn");
 const preview = document.querySelector("#preview");
+const authGate = document.querySelector("#authGate");
+const appShell = document.querySelector("#appShell");
+const authForm = document.querySelector("#authForm");
+const authPassword = document.querySelector("#authPassword");
+const authError = document.querySelector("#authError");
 let parsedNotifications = [];
 let activeNotificationIndex = 0;
+const accessPassword = "0558";
+const accessSessionKey = "locform-auth-ok";
 
 const stableNames = [
   "Drops & Wins",
@@ -1494,6 +1501,31 @@ function closeGuide() {
   guideModal.hidden = true;
 }
 
+function unlockApp() {
+  sessionStorage.setItem(accessSessionKey, "1");
+  document.body.classList.remove("auth-locked");
+  authGate.hidden = true;
+  appShell.hidden = false;
+}
+
+function lockApp() {
+  document.body.classList.add("auth-locked");
+  authGate.hidden = false;
+  appShell.hidden = true;
+  authError.hidden = true;
+  authPassword.value = "";
+  setTimeout(() => authPassword.focus(), 0);
+}
+
+function initializeAccess() {
+  if (sessionStorage.getItem(accessSessionKey) === "1") {
+    unlockApp();
+    return;
+  }
+
+  lockApp();
+}
+
 guideBtn.addEventListener("click", openGuide);
 guideCloseBtn.addEventListener("click", closeGuide);
 guideModal.addEventListener("click", (event) => {
@@ -1501,6 +1533,17 @@ guideModal.addEventListener("click", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !guideModal.hidden) closeGuide();
+});
+authForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  if (authPassword.value === accessPassword) {
+    unlockApp();
+    return;
+  }
+
+  authError.hidden = false;
+  authPassword.select();
 });
 
 convertBtn.addEventListener("click", convert);
@@ -1554,3 +1597,4 @@ Object.values(outputs).forEach((output) => {
 
 sourceText.value = "Вот сюда добавьте какой-то текст, вы же не просто так сюда пришли";
 convert();
+initializeAccess();
