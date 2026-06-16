@@ -206,6 +206,41 @@ function splitSitePrefixedButton(line) {
   return { marker, button: plain.slice(button.index).trim() };
 }
 
+function matchButtonMarker(line) {
+  return stripTagsWithSpaces(line).match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
+}
+
+function parseButtonBlockAt(lines, index) {
+  const marker = matchButtonMarker(lines[index] || "");
+  if (!marker) return null;
+
+  const markerLabel = marker[1];
+  let labelText = marker[2].trim();
+  let cursor = index + 1;
+
+  if (!labelText) {
+    while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
+    const candidate = stripTags(lines[cursor] || "");
+    if (!candidate || /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(candidate) || siteMarker(candidate) || splitSitePrefix(candidate)) return null;
+    labelText = candidate;
+    cursor += 1;
+  }
+
+  while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
+  const urlCandidate = stripTags(lines[cursor] || "");
+  const urlMatch = urlCandidate.match(/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu);
+  if (!urlMatch) return null;
+
+  const url = cleanUrl(urlMatch[1]);
+  return {
+    marker: markerLabel,
+    text: labelText,
+    url,
+    inline: `${markerLabel}: ${labelText} (${url})`,
+    nextIndex: cursor + 1,
+  };
+}
+
 function normalizeButtonBlocks(value) {
   const lines = normalizeInputText(value).split("\n");
   const out = [];
@@ -214,6 +249,12 @@ function normalizeButtonBlocks(value) {
   function splitMultipleUrls(value) {
     const matches = String(value || "").match(/(?:https?:\/\/|\/)\S+/giu) || [];
     return matches.map((match) => cleanUrl(match));
+  }
+
+  function pushExpandedButton(label, text, url) {
+    out.push(`${label}:`);
+    out.push(text);
+    out.push(`(${cleanUrl(url)})`);
   }
 
   function parseEmbeddedSiteUrlLine(value) {
@@ -252,17 +293,17 @@ function normalizeButtonBlocks(value) {
     const cleanRest = stripTags(rest);
     const inlineUrl = cleanRest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[\s\S]+?)\)?\s*$/iu);
     if (inlineUrl) {
-      return { line: `${label}: ${inlineUrl[1].trim()} (${cleanUrl(inlineUrl[2])})`, consumedNext: false };
+      return { text: inlineUrl[1].trim(), url: cleanUrl(inlineUrl[2]), consumedNext: false };
     }
 
     const inlinePlainUrl = cleanRest.match(/^(.+?)\s+((?:https?:\/\/|\/)\S+)\s*$/iu);
     if (inlinePlainUrl) {
-      return { line: `${label}: ${inlinePlainUrl[1].trim()} (${cleanUrl(inlinePlainUrl[2])})`, consumedNext: false };
+      return { text: inlinePlainUrl[1].trim(), url: cleanUrl(inlinePlainUrl[2]), consumedNext: false };
     }
 
     const url = stripTags(nextLine || "");
     if (cleanRest && /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url)) {
-      return { line: `${label}: ${cleanRest} (${cleanUrl(url)})`, consumedNext: true };
+      return { text: cleanRest, url: cleanUrl(url), consumedNext: true };
     }
 
     return null;
@@ -279,7 +320,7 @@ function normalizeButtonBlocks(value) {
       if (!built) return null;
 
       out.push(canonicalMarker);
-      out.push(built.line);
+      pushExpandedButton(label, built.text, built.url);
       return labelIndex + (built.consumedNext ? 2 : 1);
     }
 
@@ -287,7 +328,7 @@ function normalizeButtonBlocks(value) {
     if (!built) return null;
 
     out.push(canonicalMarker);
-    out.push(built.line);
+    pushExpandedButton(label, built.text, built.url);
     return next + (built.consumedNext ? 1 : 0);
   }
 
@@ -313,12 +354,12 @@ function normalizeButtonBlocks(value) {
 
       if (site.marker === "redesign" && urls.length >= 2) {
         out.push("redesign");
-        out.push(`${label}: ${buttonText} (${urls[0]})`);
+        pushExpandedButton(label, buttonText, urls[0]);
         out.push("Old version");
-        out.push(`${label}: ${buttonText} (${urls[1]})`);
+        pushExpandedButton(label, buttonText, urls[1]);
       } else {
         out.push(site.marker === "old" ? "Old version" : "redesign");
-        out.push(`${label}: ${buttonText} (${urls[0]})`);
+        pushExpandedButton(label, buttonText, urls[0]);
       }
 
       cursor += consumedLines;
@@ -336,7 +377,7 @@ function normalizeButtonBlocks(value) {
       const embedded = parseEmbeddedSiteUrlLine(lines[index + 1] || "");
       if (embedded) {
         out.push(embedded.marker === "old" ? "Old version" : "redesign");
-        out.push(`${plain}: ${embedded.label} (${embedded.url})`);
+        pushExpandedButton(plain, embedded.label, embedded.url);
         const consumed = pushLabeledSiteButtons(plain, embedded.label, index + 2);
         index = consumed !== null ? consumed : index + 2;
         continue;
@@ -349,9 +390,9 @@ function normalizeButtonBlocks(value) {
 
       if (labelLine && site?.marker === "redesign" && urls.length >= 2) {
         out.push("redesign");
-        out.push(`${plain}: ${labelLine} (${urls[0]})`);
+        pushExpandedButton(plain, labelLine, urls[0]);
         out.push("Old version");
-        out.push(`${plain}: ${labelLine} (${urls[1]})`);
+        pushExpandedButton(plain, labelLine, urls[1]);
         index += 4;
         continue;
       }
@@ -387,7 +428,7 @@ function normalizeButtonBlocks(value) {
     } else {
       const built = buildButtonLine(label, rest, lines[next]);
       if (built) {
-        out.push(built.line);
+        pushExpandedButton(label, built.text, built.url);
         index += built.consumedNext ? 2 : 1;
         continue;
       }
@@ -412,7 +453,7 @@ function normalizeButtonBlocks(value) {
       const embedded = parseEmbeddedSiteUrlLine(lines[next] || "");
       if (embedded) {
         out.push(embedded.marker === "old" ? "Old version" : "redesign");
-        out.push(`${label}: ${embedded.label} (${embedded.url})`);
+        pushExpandedButton(label, embedded.label, embedded.url);
         const consumed = pushLabeledSiteButtons(label, embedded.label, next + 1);
         index = consumed !== null ? consumed : next + 1;
         continue;
@@ -433,9 +474,9 @@ function normalizeButtonBlocks(value) {
         const siteUrls = splitMultipleUrls(siteUrlLine);
         if (site.marker === "redesign" && siteUrls.length >= 2) {
           out.push("redesign");
-          out.push(`${label}: ${stripTags(lines[next])} (${siteUrls[0]})`);
+          pushExpandedButton(label, stripTags(lines[next]), siteUrls[0]);
           out.push("Old version");
-          out.push(`${label}: ${stripTags(lines[next])} (${siteUrls[1]})`);
+          pushExpandedButton(label, stripTags(lines[next]), siteUrls[1]);
           index = next + 2;
           continue;
         }
@@ -459,7 +500,7 @@ function normalizeButtonBlocks(value) {
       rest = stripTags(lines[next]);
       const built = buildButtonLine(label, rest, lines[next + 1]);
       if (built) {
-        out.push(built.line);
+        pushExpandedButton(label, built.text, built.url);
         index = next + (built.consumedNext ? 2 : 1);
         continue;
       }
@@ -723,12 +764,14 @@ function bodyForSite(text, target) {
   let scope = "";
   let scopedButtonCluster = false;
 
-  for (const line of lines) {
+  for (let index = 0; index < lines.length;) {
+    const line = lines[index];
     const prefixed = splitSitePrefixedButton(line);
     if (prefixed) {
       if (prefixed.marker === target) out.push(prefixed.button);
       scope = "";
       scopedButtonCluster = false;
+      index += 1;
       continue;
     }
 
@@ -736,18 +779,22 @@ function bodyForSite(text, target) {
     if (marker) {
       scope = marker;
       scopedButtonCluster = true;
+      index += 1;
       continue;
     }
 
-    if (isButtonLine(line)) {
+    const buttonBlock = parseButtonBlockAt(lines, index);
+    if (buttonBlock) {
       if (scopedButtonCluster) {
-        if (scope === target) out.push(line);
+        if (scope === target) out.push(buttonBlock.inline);
         scope = "";
         scopedButtonCluster = false;
+        index = buttonBlock.nextIndex;
         continue;
       }
 
-      out.push(line);
+      out.push(buttonBlock.inline);
+      index = buttonBlock.nextIndex;
       continue;
     }
 
@@ -757,6 +804,7 @@ function bodyForSite(text, target) {
     }
 
     out.push(line);
+    index += 1;
   }
 
   return out.join("\n");
