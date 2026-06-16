@@ -204,6 +204,11 @@ function normalizeButtonBlocks(value) {
   const out = [];
   let index = 0;
 
+  function splitMultipleUrls(value) {
+    const matches = String(value || "").match(/(?:https?:\/\/|\/)\S+/giu) || [];
+    return matches.map((match) => cleanUrl(match));
+  }
+
   function buildButtonLine(label, rest, nextLine) {
     const cleanRest = stripTags(rest);
     const inlineUrl = cleanRest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[\s\S]+?)\)?\s*$/iu);
@@ -250,6 +255,22 @@ function normalizeButtonBlocks(value) {
   while (index < lines.length) {
     const line = lines[index];
     const plain = stripTags(line);
+    const bareMarker = plain.match(/^(?:Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*$/iu);
+    if (bareMarker) {
+      const labelLine = stripTags(lines[index + 1] || "");
+      const site = splitSitePrefix(lines[index + 2] || "");
+      const urlLine = stripTags(lines[index + 3] || "");
+      const urls = splitMultipleUrls(urlLine);
+
+      if (labelLine && site?.marker === "redesign" && urls.length >= 2) {
+        out.push("redesign");
+        out.push(`${plain}: ${labelLine} (${urls[0]})`);
+        out.push("Old version");
+        out.push(`${plain}: ${labelLine} (${urls[1]})`);
+        index += 4;
+        continue;
+      }
+    }
     const marker = plain.match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
 
     if (!marker) {
@@ -297,6 +318,17 @@ function normalizeButtonBlocks(value) {
     if (!rest && next < lines.length) {
       const site = splitSitePrefix(lines[next]);
       if (site) {
+        const siteUrlLine = stripTags(lines[next + 1] || "");
+        const siteUrls = splitMultipleUrls(siteUrlLine);
+        if (site.marker === "redesign" && siteUrls.length >= 2) {
+          out.push("redesign");
+          out.push(`${label}: ${stripTags(lines[next])} (${siteUrls[0]})`);
+          out.push("Old version");
+          out.push(`${label}: ${stripTags(lines[next])} (${siteUrls[1]})`);
+          index = next + 2;
+          continue;
+        }
+
         const consumed = pushSiteButton(label, site, next + 1);
         if (consumed !== null) {
           index = consumed;
