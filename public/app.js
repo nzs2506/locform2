@@ -109,6 +109,10 @@ function cleanUrl(raw) {
     .replace(/\s+/g, "");
 }
 
+function cleanMatchedUrl(raw) {
+  return cleanUrl(String(raw || "").replace(/\)+$/g, ""));
+}
+
 function stripTags(value) {
   return String(value || "").replace(/<[^>]+>/g, "").trim();
 }
@@ -238,6 +242,66 @@ function parseButtonBlockAt(lines, index) {
     url,
     inline: `${markerLabel}: ${labelText} (${url})`,
     nextIndex: cursor + 1,
+  };
+}
+
+function splitSitePrefixLoose(line) {
+  const site = splitSitePrefix(line);
+  if (!site) return null;
+
+  return {
+    marker: site.marker,
+    rest: site.rest.replace(/^[:：]\s*/, "").trim(),
+  };
+}
+
+function matchedUrls(value) {
+  return (String(value || "").match(/(?:https?:\/\/|\/)\S+/giu) || []).map((url) => cleanMatchedUrl(url));
+}
+
+function parseButtonScopedUrlsAt(lines, index) {
+  const marker = matchButtonMarker(lines[index] || "");
+  if (!marker) return null;
+
+  const markerLabel = marker[1];
+  const buttonText = marker[2].trim();
+  if (!buttonText) return null;
+
+  const variants = [];
+  let cursor = index + 1;
+
+  while (cursor < lines.length) {
+    while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
+
+    const site = splitSitePrefixLoose(lines[cursor] || "");
+    if (!site) break;
+
+    let urls = matchedUrls(site.rest);
+    let consumedLines = 1;
+
+    if (!urls.length) {
+      urls = matchedUrls(stripTags(lines[cursor + 1] || ""));
+      if (urls.length) consumedLines = 2;
+    }
+
+    if (!urls.length) break;
+
+    if (site.marker === "redesign" && urls.length >= 2) {
+      variants.push({ marker: "redesign", url: urls[0] });
+      variants.push({ marker: "old", url: urls[1] });
+    } else {
+      variants.push({ marker: site.marker, url: urls[0] });
+    }
+
+    cursor += consumedLines;
+  }
+
+  if (!variants.length) return null;
+  return {
+    marker: markerLabel,
+    text: buttonText,
+    variants,
+    nextIndex: cursor,
   };
 }
 
@@ -780,6 +844,20 @@ function bodyForSite(text, target) {
       scope = marker;
       scopedButtonCluster = true;
       index += 1;
+      continue;
+    }
+
+    const scopedUrlsButton = parseButtonScopedUrlsAt(lines, index);
+    if (scopedUrlsButton) {
+      scopedUrlsButton.variants
+        .filter((variant) => variant.marker === target)
+        .forEach((variant) => {
+          out.push(`${scopedUrlsButton.marker}: ${scopedUrlsButton.text} (${variant.url})`);
+        });
+
+      scope = "";
+      scopedButtonCluster = false;
+      index = scopedUrlsButton.nextIndex;
       continue;
     }
 
