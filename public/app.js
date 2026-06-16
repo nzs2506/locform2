@@ -216,6 +216,38 @@ function normalizeButtonBlocks(value) {
     return matches.map((match) => cleanUrl(match));
   }
 
+  function parseEmbeddedSiteUrlLine(value) {
+    const plain = stripTagsWithSpaces(value);
+    const urlMatch = plain.match(/(?:https?:\/\/|\/)\S+/i);
+    if (!urlMatch) return null;
+
+    const beforeUrl = plain.slice(0, urlMatch.index).trim();
+    const url = cleanUrl(urlMatch[0]);
+    const sitePatterns = [
+      { re: /redesign\s*site/iu, marker: "redesign" },
+      { re: /new\s*version/iu, marker: "redesign" },
+      { re: /new\s*site/iu, marker: "redesign" },
+      { re: /redesign/iu, marker: "redesign" },
+      { re: /old\s*version/iu, marker: "old" },
+      { re: /old\s*site/iu, marker: "old" },
+    ];
+
+    let bestMatch = null;
+    for (const pattern of sitePatterns) {
+      const match = pattern.re.exec(beforeUrl);
+      if (!match) continue;
+      if (!bestMatch || match.index > bestMatch.index) {
+        bestMatch = { index: match.index, marker: pattern.marker };
+      }
+    }
+
+    if (!bestMatch) return null;
+
+    const label = beforeUrl.slice(0, bestMatch.index).trim();
+    if (!label) return null;
+    return { label, marker: bestMatch.marker, url };
+  }
+
   function buildButtonLine(label, rest, nextLine) {
     const cleanRest = stripTags(rest);
     const inlineUrl = cleanRest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[\s\S]+?)\)?\s*$/iu);
@@ -301,6 +333,15 @@ function normalizeButtonBlocks(value) {
     const plain = stripTags(line);
     const bareMarker = plain.match(/^(?:Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*$/iu);
     if (bareMarker) {
+      const embedded = parseEmbeddedSiteUrlLine(lines[index + 1] || "");
+      if (embedded) {
+        out.push(embedded.marker === "old" ? "Old version" : "redesign");
+        out.push(`${plain}: ${embedded.label} (${embedded.url})`);
+        const consumed = pushLabeledSiteButtons(plain, embedded.label, index + 2);
+        index = consumed !== null ? consumed : index + 2;
+        continue;
+      }
+
       const labelLine = stripTags(lines[index + 1] || "");
       const site = splitSitePrefix(lines[index + 2] || "");
       const urlLine = stripTags(lines[index + 3] || "");
@@ -368,6 +409,15 @@ function normalizeButtonBlocks(value) {
     while (next < lines.length && !stripTags(lines[next])) next += 1;
 
     if (!rest && next < lines.length) {
+      const embedded = parseEmbeddedSiteUrlLine(lines[next] || "");
+      if (embedded) {
+        out.push(embedded.marker === "old" ? "Old version" : "redesign");
+        out.push(`${label}: ${embedded.label} (${embedded.url})`);
+        const consumed = pushLabeledSiteButtons(label, embedded.label, next + 1);
+        index = consumed !== null ? consumed : next + 1;
+        continue;
+      }
+
       const labelText = stripTags(lines[next]);
       if (labelText && !splitSitePrefix(lines[next])) {
         const consumed = pushLabeledSiteButtons(label, labelText, next + 1);
