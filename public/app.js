@@ -259,6 +259,43 @@ function normalizeButtonBlocks(value) {
     return next + (built.consumedNext ? 1 : 0);
   }
 
+  function pushLabeledSiteButtons(label, buttonText, startIndex) {
+    let cursor = startIndex;
+    let consumedAny = false;
+
+    while (cursor < lines.length) {
+      while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
+
+      const site = splitSitePrefix(lines[cursor] || "");
+      if (!site) break;
+
+      let urls = splitMultipleUrls(site.rest);
+      let consumedLines = 1;
+
+      if (!urls.length) {
+        urls = splitMultipleUrls(stripTags(lines[cursor + 1] || ""));
+        if (urls.length) consumedLines = 2;
+      }
+
+      if (!urls.length) break;
+
+      if (site.marker === "redesign" && urls.length >= 2) {
+        out.push("redesign");
+        out.push(`${label}: ${buttonText} (${urls[0]})`);
+        out.push("Old version");
+        out.push(`${label}: ${buttonText} (${urls[1]})`);
+      } else {
+        out.push(site.marker === "old" ? "Old version" : "redesign");
+        out.push(`${label}: ${buttonText} (${urls[0]})`);
+      }
+
+      cursor += consumedLines;
+      consumedAny = true;
+    }
+
+    return consumedAny ? cursor : null;
+  }
+
   while (index < lines.length) {
     const line = lines[index];
     const plain = stripTags(line);
@@ -276,6 +313,14 @@ function normalizeButtonBlocks(value) {
         out.push(`${plain}: ${labelLine} (${urls[1]})`);
         index += 4;
         continue;
+      }
+
+      if (labelLine) {
+        const consumed = pushLabeledSiteButtons(plain, labelLine, index + 2);
+        if (consumed !== null) {
+          index = consumed;
+          continue;
+        }
       }
     }
     const marker = plain.match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
@@ -323,6 +368,15 @@ function normalizeButtonBlocks(value) {
     while (next < lines.length && !stripTags(lines[next])) next += 1;
 
     if (!rest && next < lines.length) {
+      const labelText = stripTags(lines[next]);
+      if (labelText && !splitSitePrefix(lines[next])) {
+        const consumed = pushLabeledSiteButtons(label, labelText, next + 1);
+        if (consumed !== null) {
+          index = consumed;
+          continue;
+        }
+      }
+
       const site = splitSitePrefix(lines[next]);
       if (site) {
         const siteUrlLine = stripTags(lines[next + 1] || "");
