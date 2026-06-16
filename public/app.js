@@ -278,16 +278,14 @@ function normalizeButtonBlocks(value) {
       const built = buildButtonLine(label, lines[labelIndex], lines[labelIndex + 1]);
       if (!built) return null;
 
-      out.push(canonicalMarker);
-      out.push(built.line);
+      out.push(`${canonicalMarker} ${built.line}`);
       return labelIndex + (built.consumedNext ? 2 : 1);
     }
 
     const built = buildButtonLine(label, site.rest, lines[next]);
     if (!built) return null;
 
-    out.push(canonicalMarker);
-    out.push(built.line);
+    out.push(`${canonicalMarker} ${built.line}`);
     return next + (built.consumedNext ? 1 : 0);
   }
 
@@ -312,13 +310,10 @@ function normalizeButtonBlocks(value) {
       if (!urls.length) break;
 
       if (site.marker === "redesign" && urls.length >= 2) {
-        out.push("redesign");
-        out.push(`${label}: ${buttonText} (${urls[0]})`);
-        out.push("Old version");
-        out.push(`${label}: ${buttonText} (${urls[1]})`);
+        out.push(`redesign ${label}: ${buttonText} (${urls[0]})`);
+        out.push(`Old version ${label}: ${buttonText} (${urls[1]})`);
       } else {
-        out.push(site.marker === "old" ? "Old version" : "redesign");
-        out.push(`${label}: ${buttonText} (${urls[0]})`);
+        out.push(`${site.marker === "old" ? "Old version" : "redesign"} ${label}: ${buttonText} (${urls[0]})`);
       }
 
       cursor += consumedLines;
@@ -335,8 +330,7 @@ function normalizeButtonBlocks(value) {
     if (bareMarker) {
       const embedded = parseEmbeddedSiteUrlLine(lines[index + 1] || "");
       if (embedded) {
-        out.push(embedded.marker === "old" ? "Old version" : "redesign");
-        out.push(`${plain}: ${embedded.label} (${embedded.url})`);
+        out.push(`${embedded.marker === "old" ? "Old version" : "redesign"} ${plain}: ${embedded.label} (${embedded.url})`);
         const consumed = pushLabeledSiteButtons(plain, embedded.label, index + 2);
         index = consumed !== null ? consumed : index + 2;
         continue;
@@ -348,10 +342,8 @@ function normalizeButtonBlocks(value) {
       const urls = splitMultipleUrls(urlLine);
 
       if (labelLine && site?.marker === "redesign" && urls.length >= 2) {
-        out.push("redesign");
-        out.push(`${plain}: ${labelLine} (${urls[0]})`);
-        out.push("Old version");
-        out.push(`${plain}: ${labelLine} (${urls[1]})`);
+        out.push(`redesign ${plain}: ${labelLine} (${urls[0]})`);
+        out.push(`Old version ${plain}: ${labelLine} (${urls[1]})`);
         index += 4;
         continue;
       }
@@ -411,8 +403,7 @@ function normalizeButtonBlocks(value) {
     if (!rest && next < lines.length) {
       const embedded = parseEmbeddedSiteUrlLine(lines[next] || "");
       if (embedded) {
-        out.push(embedded.marker === "old" ? "Old version" : "redesign");
-        out.push(`${label}: ${embedded.label} (${embedded.url})`);
+        out.push(`${embedded.marker === "old" ? "Old version" : "redesign"} ${label}: ${embedded.label} (${embedded.url})`);
         const consumed = pushLabeledSiteButtons(label, embedded.label, next + 1);
         index = consumed !== null ? consumed : next + 1;
         continue;
@@ -432,10 +423,8 @@ function normalizeButtonBlocks(value) {
         const siteUrlLine = stripTags(lines[next + 1] || "");
         const siteUrls = splitMultipleUrls(siteUrlLine);
         if (site.marker === "redesign" && siteUrls.length >= 2) {
-          out.push("redesign");
-          out.push(`${label}: ${stripTags(lines[next])} (${siteUrls[0]})`);
-          out.push("Old version");
-          out.push(`${label}: ${stripTags(lines[next])} (${siteUrls[1]})`);
+          out.push(`redesign ${label}: ${stripTags(lines[next])} (${siteUrls[0]})`);
+          out.push(`Old version ${label}: ${stripTags(lines[next])} (${siteUrls[1]})`);
           index = next + 2;
           continue;
         }
