@@ -373,27 +373,41 @@ function normalizeButtonBlocks(value) {
     return null;
   }
 
-  function pushSiteButton(label, site, next) {
+  function urlOnlyLine(value) {
+    const match = stripTags(value || "").match(/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu);
+    return match ? cleanMatchedUrl(match[1]) : "";
+  }
+
+  function pushSiteButton(label, site, next, fallbackText = "") {
     const canonicalMarker = site.marker === "old" ? "Old version" : "redesign";
-    if (!site.rest && next < lines.length) {
+    const siteRest = String(site.rest || "").replace(/^[:：]\s*/, "").trim();
+
+    if (!siteRest && next < lines.length) {
       let labelIndex = next;
       while (labelIndex < lines.length && !stripTags(lines[labelIndex])) labelIndex += 1;
       if (labelIndex >= lines.length) return null;
 
       const built = buildButtonLine(label, lines[labelIndex], lines[labelIndex + 1]);
-      if (!built) return null;
+      if (!built) {
+        const inheritedUrl = fallbackText ? urlOnlyLine(lines[labelIndex]) : "";
+        if (!inheritedUrl) return null;
+
+        out.push(canonicalMarker);
+        pushExpandedButton(label, fallbackText, inheritedUrl);
+        return { nextIndex: labelIndex + 1, text: fallbackText };
+      }
 
       out.push(canonicalMarker);
       pushExpandedButton(label, built.text, built.url);
-      return labelIndex + (built.consumedNext ? 2 : 1);
+      return { nextIndex: labelIndex + (built.consumedNext ? 2 : 1), text: built.text };
     }
 
-    const built = buildButtonLine(label, site.rest, lines[next]);
+    const built = buildButtonLine(label, siteRest, lines[next]);
     if (!built) return null;
 
     out.push(canonicalMarker);
     pushExpandedButton(label, built.text, built.url);
-    return next + (built.consumedNext ? 1 : 0);
+    return { nextIndex: next + (built.consumedNext ? 1 : 0), text: built.text };
   }
 
   function pushLabeledSiteButtons(label, buttonText, startIndex) {
@@ -481,12 +495,14 @@ function normalizeButtonBlocks(value) {
     let rest = marker[2].trim();
     let next = index + 1;
     let consumedSiteButtons = false;
+    let inheritedSiteButtonText = "";
 
     const prefixedRest = splitSitePrefix(rest);
     if (prefixedRest) {
       const consumed = pushSiteButton(label, prefixedRest, next);
       if (consumed !== null) {
-        index = consumed;
+        index = consumed.nextIndex;
+        inheritedSiteButtonText = consumed.text;
         consumedSiteButtons = true;
       }
     } else {
@@ -502,9 +518,10 @@ function normalizeButtonBlocks(value) {
       while (index < lines.length && !stripTags(lines[index])) index += 1;
       const site = splitSitePrefix(lines[index]);
       if (!site) break;
-      const consumed = pushSiteButton(label, site, index + 1);
+      const consumed = pushSiteButton(label, site, index + 1, inheritedSiteButtonText);
       if (consumed === null) break;
-      index = consumed;
+      index = consumed.nextIndex;
+      inheritedSiteButtonText = consumed.text || inheritedSiteButtonText;
     }
 
     if (consumedSiteButtons) {
@@ -547,15 +564,17 @@ function normalizeButtonBlocks(value) {
 
         const consumed = pushSiteButton(label, site, next + 1);
         if (consumed !== null) {
-          index = consumed;
+          index = consumed.nextIndex;
+          inheritedSiteButtonText = consumed.text;
           consumedSiteButtons = true;
           while (index < lines.length) {
             while (index < lines.length && !stripTags(lines[index])) index += 1;
             const repeatedSite = splitSitePrefix(lines[index]);
             if (!repeatedSite) break;
-            const repeatedConsumed = pushSiteButton(label, repeatedSite, index + 1);
+            const repeatedConsumed = pushSiteButton(label, repeatedSite, index + 1, inheritedSiteButtonText);
             if (repeatedConsumed === null) break;
-            index = repeatedConsumed;
+            index = repeatedConsumed.nextIndex;
+            inheritedSiteButtonText = repeatedConsumed.text || inheritedSiteButtonText;
           }
           continue;
         }
