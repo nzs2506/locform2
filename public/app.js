@@ -101,9 +101,10 @@ function escapeRegExp(value) {
 }
 
 function cleanUrl(raw) {
-  return raw
+  return String(raw || "")
     .trim()
-    .replace(/^\((.*)\)$/s, "$1")
+    .replace(/^\(+/, "")
+    .replace(/\)+$/, "")
     .replace(/\s*&\s*/g, "&")
     .replace(/\s*=\s*/g, "=")
     .replace(/\s+/g, "");
@@ -424,8 +425,10 @@ function normalizeButtonBlocks(value) {
       let consumedLines = 1;
 
       if (!urls.length) {
-        urls = splitMultipleUrls(stripTags(lines[cursor + 1] || ""));
-        if (urls.length) consumedLines = 2;
+        let urlIndex = cursor + 1;
+        while (urlIndex < lines.length && !stripTags(lines[urlIndex])) urlIndex += 1;
+        urls = splitMultipleUrls(stripTags(lines[urlIndex] || ""));
+        if (urls.length) consumedLines = urlIndex - cursor + 1;
       }
 
       if (!urls.length) break;
