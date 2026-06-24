@@ -1492,7 +1492,9 @@ function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
     .replace(/<p[^>]*>/gi, "")
     .replace(/<(?!\/?(?:b|i|u|a)\b)[^>]+>/gi, "");
 
-  text = text.replace(/(?:<b>)?(message\.service(?:\.[a-z]{2,5})?\.\d+(?:\.topic)?)(?:<\/b>)?\s*/gi, "\n$1\n");
+  text = text
+    .replace(/(?:<b>)?(message\.service(?:\.[a-z]{2,5})?\.\d+\.topic)(?:<\/b>)?/gi, "\n$1\n")
+    .replace(/(?:<b>)?(message\.service(?:\.[a-z]{2,5})?\.\d+)(?![\d.])(?:<\/b>)?/gi, "\n$1\n");
   let seenTopicKey = false;
   text = text.replace(/\n(message\.service(?:\.(?!topic\b)[a-z0-9_-]+)+\.topic)\n/gi, (_, topicKeyText) => {
     const prefix = seenTopicKey ? "\n\n" : "\n";
