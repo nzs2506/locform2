@@ -748,6 +748,20 @@ function languageHeader(line) {
   return match[1].toUpperCase();
 }
 
+function isBareNumericServiceKey(key) {
+  return /^message\.service\.\d+$/i.test(key);
+}
+
+function inferLanguageFromContent(value) {
+  const text = plainOutputText(value).toLowerCase();
+  if (!text) return "";
+  if (/[а-яё]/iu.test(text)) return "RUS";
+  if (/[¿¡ñáéíóúü]/iu.test(text) || /\b(?:pod[eé]s|jug[aá]|campeones|responsabilidad)\b/iu.test(text)) return "ARG";
+  if (/(?:iltimos|batafsil|jahon|chempion|ishtirok|yapsiz|uchun|bilan|yo'l|o'|g')/iu.test(text)) return "UZB";
+  if (/[a-z]/iu.test(text)) return "ENG";
+  return "";
+}
+
 function topicKey(key, language) {
   return `${language || ""}|${key}`;
 }
@@ -764,18 +778,41 @@ function parseNotifications(text) {
   const lines = normalizeButtonBlocks(text).split("\n");
   const sections = [];
   const topics = {};
+  const topicQueues = {};
   let language = "";
   let key = "";
+  let sectionLanguage = "";
+  let sectionTopic = "";
   let body = [];
   let awaitingTopicFor = "";
   let awaitingTopicLanguage = "";
 
+  function enqueueTopic(topicFor, topicLanguage, topicText) {
+    if (!topicQueues[topicFor]) topicQueues[topicFor] = [];
+    topicQueues[topicFor].push({ language: topicLanguage, topic: topicText });
+    if (!topics[topicKey(topicFor, topicLanguage)]) topics[topicKey(topicFor, topicLanguage)] = topicText;
+    if (!topicLanguage && !topics[topicKey(topicFor, "")]) topics[topicKey(topicFor, "")] = topicText;
+  }
+
+  function takeQueuedTopic(topicFor, preferredLanguage) {
+    const queue = topicQueues[topicFor] || [];
+    if (!queue.length) return null;
+
+    const index = preferredLanguage
+      ? queue.findIndex((item) => item.language === preferredLanguage || !item.language)
+      : 0;
+    if (index < 0) return null;
+
+    return queue.splice(index, 1)[0];
+  }
+
   function save() {
     if (!key) return;
+    const effectiveLanguage = sectionLanguage || language;
     sections.push({
       key,
-      language,
-      topic: topics[topicKey(key, language)] || topics[topicKey(key, "")] || "",
+      language: effectiveLanguage,
+      topic: sectionTopic || topics[topicKey(key, effectiveLanguage)] || topics[topicKey(key, "")] || "",
       body: body.join("\n").trim(),
     });
   }
@@ -791,6 +828,8 @@ function parseNotifications(text) {
       if (key) save();
       language = nextLanguage;
       key = "";
+      sectionLanguage = "";
+      sectionTopic = "";
       body = [];
       awaitingTopicFor = "";
       awaitingTopicLanguage = "";
@@ -800,29 +839,30 @@ function parseNotifications(text) {
     if (isServiceKeyLine(raw)) {
       if (/\.topic$/i.test(plain)) {
         const baseKey = serviceKeyBase(plain);
-        if (topics[topicKey(baseKey, language)] || topics[topicKey(baseKey, "")]) {
-          save();
-          key = baseKey;
-          body = [];
-          awaitingTopicFor = "";
-          awaitingTopicLanguage = "";
-          continue;
-        }
+        if (key) save();
 
         awaitingTopicFor = baseKey;
         awaitingTopicLanguage = language;
+        key = "";
+        sectionLanguage = "";
+        sectionTopic = "";
+        body = [];
         continue;
       }
 
       save();
+      const queuedTopic = takeQueuedTopic(plain, language);
       key = plain;
+      sectionLanguage = queuedTopic?.language || language;
+      sectionTopic = queuedTopic?.topic || "";
       body = [];
       awaitingTopicFor = "";
       continue;
     }
 
     if (awaitingTopicFor && plain && !/неразрывные\s+пробелы/iu.test(plain)) {
-      topics[topicKey(awaitingTopicFor, awaitingTopicLanguage)] = plainOutputText(raw);
+      const inferredLanguage = awaitingTopicLanguage || (isBareNumericServiceKey(awaitingTopicFor) ? inferLanguageFromContent(raw) : "");
+      enqueueTopic(awaitingTopicFor, inferredLanguage, plainOutputText(raw));
       awaitingTopicFor = "";
       awaitingTopicLanguage = "";
       continue;
@@ -1452,7 +1492,13 @@ function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
     .replace(/<p[^>]*>/gi, "")
     .replace(/<(?!\/?(?:b|i|u|a)\b)[^>]+>/gi, "");
 
-  text = text.replace(/(?:<b>)?(message\.service(?:\.(?!topic\b)[a-z0-9_-]+)+(?:\.topic)?)(?:<\/b>)?\s*/gi, "\n$1\n");
+  text = text.replace(/(?:<b>)?(message\.service(?:\.[a-z]{2,5})?\.\d+(?:\.topic)?)(?:<\/b>)?\s*/gi, "\n$1\n");
+  let seenTopicKey = false;
+  text = text.replace(/\n(message\.service(?:\.(?!topic\b)[a-z0-9_-]+)+\.topic)\n/gi, (_, topicKeyText) => {
+    const prefix = seenTopicKey ? "\n\n" : "\n";
+    seenTopicKey = true;
+    return `${prefix}${topicKeyText}\n`;
+  });
 
   text = applyDocxInlineLinkHints(text, inlineLinkHints);
   text = applyDocxHighlightButtonHints(text, highlightHints);
