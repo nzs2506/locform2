@@ -613,12 +613,16 @@ function normalizeButtonBlocks(value) {
 
 function applyNbsp(value, includeDynamic = true) {
   let html = value;
+  const amountPattern = "(?:\\d+(?:&nbsp;\\d{3})*(?:[,.]\\d+)?|\\d+(?:[,.]\\d+)?)";
+  const currencyPattern = "(?:₽|руб\\.?|BYN|UZS|USD|EUR|AR\\$|US\\$|\\$|€)";
+  const currencyFollow = "(?=$|[\\s<.,!?:;)])";
 
   html = html.replace(/\b(\d{1,3}(?:[ \u00a0]\d{3})+)\b/g, (match) => match.replace(/[ \u00a0]/g, "&nbsp;"));
-  html = html.replace(/(\d(?:&nbsp;|\d)*)(?:\s|&nbsp;)*(₽|руб\.?|BYN|UZS|USD|EUR|\$|€)/gi, "$1&nbsp;$2");
-  html = html.replace(/\b(\d+)\s+(₽|BYN|UZS|USD|EUR|\$|€)\b/gi, "$1&nbsp;$2");
+  html = html.replace(new RegExp(`\\b(${amountPattern})(?:\\s|&nbsp;)+(${currencyPattern})${currencyFollow}`, "giu"), "$1&nbsp;$2");
+  html = html.replace(new RegExp(`(${currencyPattern})(?:\\s|&nbsp;)+(${amountPattern})\\b`, "giu"), "$1&nbsp;$2");
   html = html.replace(/(\d+)\s+фриспинов/giu, "$1&nbsp;фриспинов");
-  html = html.replace(/до\s+(\d+(?:&nbsp;\d{3})*&nbsp;(?:₽|руб\.?|BYN|UZS|USD|EUR|\$|€))/giu, "до&nbsp;$1");
+  html = html.replace(new RegExp(`(^|[\\s>(])((?:от|до))(?:\\s|&nbsp;)+(${amountPattern}&nbsp;${currencyPattern})`, "giu"), "$1$2&nbsp;$3");
+  html = html.replace(new RegExp(`(^|[\\s>(])((?:от|до))(?:\\s|&nbsp;)+(${currencyPattern}&nbsp;${amountPattern})`, "giu"), "$1$2&nbsp;$3");
 
   const names = includeDynamic ? [...stableNames, ...dynamicStableNames] : stableNames;
   for (const name of names) {
@@ -672,7 +676,8 @@ function balanceInlineTags(value) {
 }
 
 function formatInline(line) {
-  const escaped = restoreAllowedTags(escapeHtml(removeTinyBoldTags(normalizeBold(line.trim()))));
+  const normalizedLine = String(line || "").replace(/[ \t]{2,}/g, " ").trim();
+  const escaped = restoreAllowedTags(escapeHtml(removeTinyBoldTags(normalizeBold(normalizedLine))));
   return applyNbsp(balanceInlineTags(escaped));
 }
 
@@ -680,7 +685,7 @@ function parseButton(matchText, color, label, url) {
   return {
     type: "button",
     color,
-    text: label.trim(),
+    text: String(label || "").replace(/[ \t]{2,}/g, " ").trim(),
     url: cleanUrl(url),
     source: matchText,
   };
@@ -734,7 +739,7 @@ function isDiscardedServiceLabel(line) {
 }
 
 function isLineBreakInstruction(line) {
-  return /^\u041c\u0435\u0436\u0434\u0443\u0441\u0442\u0440\u043e\u0447\u043d\u044b\u0439\s+(?:\u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b|\u043f\u0440\u043e\u0431\u0435\u043b)$/iu.test(plainOutputText(line));
+  return /^\u041c\u0435\u0436(?:\u0434\u0443)?\u0441\u0442\u0440\u043e\u0447\u043d\u044b\u0439\s+(?:\u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b|\u043f\u0440\u043e\u0431\u0435\u043b)$/iu.test(plainOutputText(line));
 }
 
 function serviceKeyBase(key) {
@@ -746,6 +751,22 @@ function languageHeader(line) {
   const match = plain.match(/^(?:PC|COM|MOB|WEB|APP|AN)?\s*(ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|ARG|LATAM|LAT|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b/i);
   if (!match) return "";
   return match[1].toUpperCase();
+}
+
+function separateLanguageHeaders(value) {
+  const out = [];
+  let seenLanguageHeader = false;
+
+  for (const line of String(value || "").split("\n")) {
+    if (languageHeader(line)) {
+      if (seenLanguageHeader && out.length && stripTagsWithSpaces(out[out.length - 1])) out.push("");
+      seenLanguageHeader = true;
+    }
+
+    out.push(line);
+  }
+
+  return out.join("\n");
 }
 
 function isBareNumericServiceKey(key) {
@@ -953,7 +974,7 @@ function bodyForSite(text, target) {
 function normalizeTextChunk(text) {
   const normalized = trimAfterAgeWarning(stripServiceLines(text)
     .replace(/\r\n?/g, "\n")
-    .replace(/\s*Междустрочный (?:интервал|пробел)\s*/giu, "\n__BRBR__\n")
+    .replace(/\s*Меж(?:ду)?строчный (?:интервал|пробел)\s*/giu, "\n__BRBR__\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
     .trim());
@@ -1011,7 +1032,7 @@ function parseTextChunk(text) {
   function flushList() {
     if (!listBuffer) return;
     const items = listBuffer.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-    segments.push({ type: "block", html: `<${listBuffer.type} style="margin-top: 0; margin-bottom: 0;">\n${items}\n</${listBuffer.type}>` });
+    segments.push({ type: "block", html: `<${listBuffer.type}>\n${items}\n</${listBuffer.type}>` });
     listBuffer = null;
   }
 
@@ -1039,7 +1060,7 @@ function parseTextChunk(text) {
       flushList();
       if (numbered.intro) segments.push({ type: "line", html: formatInline(numbered.intro) });
       const items = numbered.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-      segments.push({ type: "block", html: `<ol style="margin-top: 0; margin-bottom: 0;">\n${items}\n</ol>` });
+      segments.push({ type: "block", html: `<ol>\n${items}\n</ol>` });
       continue;
     }
 
@@ -1504,6 +1525,7 @@ function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
 
   text = applyDocxInlineLinkHints(text, inlineLinkHints);
   text = applyDocxHighlightButtonHints(text, highlightHints);
+  text = separateLanguageHeaders(text);
 
   return normalizeButtonBlocks(text);
 }
