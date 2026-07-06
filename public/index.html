@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.31</title>
+  <title>LOCform 3.8.32</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.31">
+  <link rel="stylesheet" href="styles.css?v=3.8.32">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.31</h1>
+              <h1>LOCform 3.8.32</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R</span>
@@ -157,18 +157,29 @@ Old version
         <pre><code>Зеленая кнопка: Получить бонус (/account/deposit)
 Белая кнопка: Узнать больше (/promotions/promotion/411)</code></pre>
 
-        <h3>4. Цвета кнопок</h3>
+        <h3>4. Списки</h3>
+        <p>Для маркированного списка пишите каждый пункт отдельной строкой и начинайте его с дефиса. Заголовок списка оставляйте отдельной строкой над пунктами. Скрипт соберёт это в обычный <code>&lt;ul&gt;</code> и <code>&lt;li&gt;</code>.</p>
+        <pre><code>Условия:
+- Максимальная сумма ставки 500 000 UZS.
+- Один счёт = одна ставка.
+- Учитываются только одиночные предматчевые ставки.</code></pre>
+        <p>Нумерованный список тоже лучше писать по одному пункту на строку.</p>
+        <pre><code>1. Нажмите кнопку «Участвовать».
+2. Сделайте ставку.
+3. Получите бонус.</code></pre>
+
+        <h3>5. Цвета кнопок</h3>
         <p>Зелёную кнопку можно писать как <code>Зеленая кнопка</code>, <code>Кнопка зеленая</code>, <code>Green button</code> или <code>Button green</code>. Белую — <code>Белая кнопка</code>, <code>Кнопка белая</code>, <code>White button</code> или <code>Button white</code>.</p>
 
-        <h3>5. Интервалы и 18+</h3>
-        <p>Для пустой строки пишите отдельной строкой <code>Междустрочный интервал</code>. После финальной строки <code>18+ | ...</code> ничего не добавляйте: всё ниже будет отрезано.</p>
+        <h3>6. Интервалы и 18+</h3>
+        <p>Для пустой строки пишите отдельной строкой <code>Междустрочный интервал</code> или <code>Межстрочный интервал</code>. После финальной строки <code>18+ | ...</code> ничего не добавляйте: всё ниже будет отрезано.</p>
 
-        <h3>6. Ссылки внутри текста</h3>
+        <h3>7. Ссылки внутри текста</h3>
         <p>Если фраза в Word уже содержит ссылку, скрипт сохранит её как подчёркнутую курсивную ссылку. Лучше вешать ссылку только на нужную фразу, не на весь абзац.</p>
       </div>
     </section>
   </div>
 
-  <script src="app.js?v=3.8.31"></script>
+  <script src="app.js?v=3.8.32"></script>
 </body>
 </html>

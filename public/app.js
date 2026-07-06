@@ -1605,6 +1605,7 @@ function renderSegments(version, segments) {
     const next = segments[index + 1];
 
     if (segment.type === "break") {
+      if ((version === "pc" || version === "pcMb6r") && next?.type === "button") continue;
       if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
       continue;
     }
@@ -1613,7 +1614,7 @@ function renderSegments(version, segments) {
     if (!html) continue;
 
     const previous = segments[index - 1];
-    if ((version === "compact" || version === "mobile" || version === "pc" || version === "pcMb6r") && segment.type === "button") {
+    if ((version === "compact" || version === "mobile") && segment.type === "button") {
       if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
       rendered.push(html);
       continue;
