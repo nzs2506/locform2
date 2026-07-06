@@ -399,8 +399,11 @@ textarea {
 }
 
 .guide-modal {
-  width: min(760px, 100%);
-  max-height: min(760px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  width: min(920px, calc(100vw - 32px));
+  height: min(920px, calc(100vh - 24px));
+  max-height: calc(100vh - 24px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -428,7 +431,8 @@ textarea {
 }
 
 .guide-body {
-  max-height: calc(100vh - 150px);
+  flex: 1;
+  min-height: 0;
   padding: 18px;
   overflow: auto;
   color: var(--text);
