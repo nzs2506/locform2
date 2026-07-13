@@ -1032,7 +1032,7 @@ function parseTextChunk(text) {
   function flushList() {
     if (!listBuffer) return;
     const items = listBuffer.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-    segments.push({ type: "block", html: `<${listBuffer.type}>\n${items}\n</${listBuffer.type}>` });
+    segments.push({ type: "block", kind: "list", html: `<${listBuffer.type}>\n${items}\n</${listBuffer.type}>` });
     listBuffer = null;
   }
 
@@ -1060,7 +1060,7 @@ function parseTextChunk(text) {
       flushList();
       if (numbered.intro) segments.push({ type: "line", html: formatInline(numbered.intro) });
       const items = numbered.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-      segments.push({ type: "block", html: `<ol>\n${items}\n</ol>` });
+      segments.push({ type: "block", kind: "list", html: `<ol>\n${items}\n</ol>` });
       continue;
     }
 
@@ -1603,8 +1603,13 @@ function renderSegments(version, segments) {
   for (let index = 0; index < segments.length; index += 1) {
     const segment = segments[index];
     const next = segments[index + 1];
+    const previous = segments[index - 1];
 
     if (segment.type === "break") {
+      if (previous?.kind === "list") {
+        if (!String(rendered[rendered.length - 1] || "").match(/<br>\s*$/)) rendered.push("\n<br>\n");
+        continue;
+      }
       if ((version === "pc" || version === "pcMb6r") && next?.type === "button") continue;
       if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
       continue;
@@ -1613,9 +1618,9 @@ function renderSegments(version, segments) {
     const html = segment.type === "button" ? makeButtonHtml(version, segment.buttons) : segment.html;
     if (!html) continue;
 
-    const previous = segments[index - 1];
     if ((version === "compact" || version === "mobile") && segment.type === "button") {
-      if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
+      const lastRendered = String(rendered[rendered.length - 1] || "");
+      if (!lastRendered.includes("<br><br>") && !lastRendered.match(/<br>\s*$/)) rendered.push("\n\n<br><br>\n\n");
       rendered.push(html);
       continue;
     }
@@ -1626,6 +1631,16 @@ function renderSegments(version, segments) {
   }
 
   return rendered.join("").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function renderTopicOutput(topic) {
+  const plainTopic = String(topic || "").trim();
+  if (!plainTopic) return "";
+
+  const redesignTopic = applyNbsp(escapeHtml(plainTopic));
+  if (redesignTopic === escapeHtml(plainTopic)) return plainTopic;
+
+  return `${plainTopic}\n\nredesign\n${redesignTopic}`;
 }
 
 function redesignUrlFromOld(url) {
@@ -1694,7 +1709,7 @@ function renderCurrentNotification() {
     return;
   }
 
-  outputs.topic.value = section.topic || "";
+  outputs.topic.value = renderTopicOutput(section.topic);
 
   const oldSegments = extractSegments(bodyForSite(section.body, "old"));
   const redesignSegments = extractSegments(bodyForSite(section.body, "redesign"));
