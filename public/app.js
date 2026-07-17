@@ -1671,7 +1671,12 @@ function renderSegments(version, segments) {
       continue;
     }
 
-    const separator = previous?.type === "line" && segment.type === "line" ? "<br>\n" : "\n\n";
+    const previousLineEndsWithColon = previous?.type === "line" && /[:：]$/u.test(plainOutputText(previous.html));
+    const separator = previous?.type === "line" && segment.type === "line"
+      ? "<br>\n"
+      : previousLineEndsWithColon && segment.kind === "list"
+        ? "\n"
+        : "\n\n";
     if (rendered.length && rendered[rendered.length - 1] !== "<br><br>") rendered.push(separator);
     rendered.push(html);
   }
