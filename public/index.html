@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.36</title>
+  <title>LOCform 3.8.37</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.36">
+  <link rel="stylesheet" href="styles.css?v=3.8.37">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.36</h1>
+              <h1>LOCform 3.8.37</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R</span>
@@ -161,7 +161,12 @@ Old version
 
         <h3>4. Списки</h3>
         <p>Для маркированного списка пишите каждый пункт отдельной строкой и начинайте его с дефиса. Заголовок списка оставляйте отдельной строкой над пунктами. Скрипт соберёт это в обычный <code>&lt;ul&gt;</code> и <code>&lt;li&gt;</code>.</p>
-        <p>Если строка перед списком заканчивается двоеточием, список будет прижат к ней без большого пустого отступа.</p>
+        <p>Если строка перед списком заканчивается двоеточием, список будет прижат к ней без большого пустого отступа. Самый понятный формат: сначала вводная строка с <code>:</code>, затем пункты отдельными строками.</p>
+        <pre><code>Чтобы принять участие, выполните условия:
+- съешьте банан
+- съешьте пиццу
+- выпейте кофе</code></pre>
+        <p>Для рабочих условий формат такой же:</p>
         <pre><code>Условия:
 - Максимальная сумма ставки 500 000 UZS.
 - Один счёт = одна ставка.
@@ -183,6 +188,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.36"></script>
+  <script src="app.js?v=3.8.37"></script>
 </body>
 </html>
