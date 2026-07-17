@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.34</title>
+  <title>LOCform 3.8.35</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.34">
+  <link rel="stylesheet" href="styles.css?v=3.8.35">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.34</h1>
+              <h1>LOCform 3.8.35</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R</span>
@@ -138,6 +138,7 @@ Main notification text...</code></pre>
         <h3>3. Кнопки и версии сайта</h3>
         <p><code>redesign</code>, <code>new site</code>, <code>new version</code> — ссылка для Redesign. <code>Old version</code>, <code>old site</code> — ссылка для Web и Mobile.</p>
         <p>Самый понятный формат для скрипта — сначала цвет кнопки, потом фраза в кнопке, потом версия сайта, потом отдельной строкой ссылка. Скобки вокруг ссылки можно ставить: скрипт уберёт внешние <code>(</code> и <code>)</code>.</p>
+        <p>Если внутри ссылки случайно стоит пробел перед <code>?</code>, <code>&amp;</code>, <code>=</code> или после них, скрипт уберёт его при сборке кнопки.</p>
         <pre><code>Зеленая кнопка
 Узнать больше
 redesign
@@ -181,6 +182,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.34"></script>
+  <script src="app.js?v=3.8.35"></script>
 </body>
 </html>

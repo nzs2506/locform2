@@ -114,6 +114,48 @@ function cleanMatchedUrl(raw) {
   return cleanUrl(String(raw || "").replace(/\)+$/g, ""));
 }
 
+function findUrlMatches(value) {
+  const text = String(value || "");
+  const matches = [];
+  const startRe = /https?:\/\/|\/(?!\/)/giu;
+  let startMatch;
+
+  while ((startMatch = startRe.exec(text))) {
+    let index = startMatch.index;
+    let raw = "";
+
+    while (index < text.length) {
+      const char = text[index];
+
+      if (char === "\n" || char === "\r" || char === ")") break;
+
+      if (/\s/u.test(char)) {
+        let nextIndex = index + 1;
+        while (nextIndex < text.length && /\s/u.test(text[nextIndex])) nextIndex += 1;
+        const nextChar = text[nextIndex] || "";
+        const previousChar = raw[raw.length - 1] || "";
+
+        if (!nextChar || /^https?:\/\//iu.test(text.slice(nextIndex)) || (nextChar === "/" && text[nextIndex + 1] !== "/")) break;
+
+        if (/[?&=#]/u.test(nextChar) || /[?&=/#]/u.test(previousChar)) {
+          index = nextIndex;
+          continue;
+        }
+
+        break;
+      }
+
+      raw += char;
+      index += 1;
+    }
+
+    if (raw) matches.push({ raw, url: cleanMatchedUrl(raw), index: startMatch.index, end: index });
+    startRe.lastIndex = Math.max(index, startMatch.index + startMatch[0].length);
+  }
+
+  return matches;
+}
+
 function stripTags(value) {
   return String(value || "").replace(/<[^>]+>/g, "").trim();
 }
@@ -257,7 +299,7 @@ function splitSitePrefixLoose(line) {
 }
 
 function matchedUrls(value) {
-  return (String(value || "").match(/(?:https?:\/\/|\/)\S+/giu) || []).map((url) => cleanMatchedUrl(url));
+  return findUrlMatches(value).map((match) => match.url);
 }
 
 function parseButtonScopedUrlsAt(lines, index) {
@@ -312,8 +354,7 @@ function normalizeButtonBlocks(value) {
   let index = 0;
 
   function splitMultipleUrls(value) {
-    const matches = String(value || "").match(/(?:https?:\/\/|\/)\S+/giu) || [];
-    return matches.map((match) => cleanUrl(match));
+    return matchedUrls(value);
   }
 
   function pushExpandedButton(label, text, url) {
@@ -324,11 +365,11 @@ function normalizeButtonBlocks(value) {
 
   function parseEmbeddedSiteUrlLine(value) {
     const plain = stripTagsWithSpaces(value);
-    const urlMatch = plain.match(/(?:https?:\/\/|\/)\S+/i);
+    const urlMatch = findUrlMatches(plain)[0];
     if (!urlMatch) return null;
 
     const beforeUrl = plain.slice(0, urlMatch.index).trim();
-    const url = cleanUrl(urlMatch[0]);
+    const url = urlMatch.url;
     const sitePatterns = [
       { re: /redesign\s*site/iu, marker: "redesign" },
       { re: /new\s*version/iu, marker: "redesign" },
@@ -364,6 +405,11 @@ function normalizeButtonBlocks(value) {
     const inlinePlainUrl = cleanRest.match(/^(.+?)\s+((?:https?:\/\/|\/)\S+)\s*$/iu);
     if (inlinePlainUrl) {
       return { text: inlinePlainUrl[1].trim(), url: cleanUrl(inlinePlainUrl[2]), consumedNext: false };
+    }
+
+    const urlMatch = findUrlMatches(cleanRest)[0];
+    if (urlMatch && cleanRest.slice(urlMatch.end).trim() === "") {
+      return { text: cleanRest.slice(0, urlMatch.index).trim(), url: urlMatch.url, consumedNext: false };
     }
 
     const url = stripTags(nextLine || "");
