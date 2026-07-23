@@ -1039,9 +1039,10 @@ function numberedParts(text) {
     const end = matches[index + 1]?.index ?? text.length;
     return text.slice(start, end).trim();
   }).filter(Boolean);
+  const numbers = matches.map((match) => Number(match[1]));
 
   if (!items.length) return null;
-  return { intro, items };
+  return { intro, items, numbers };
 }
 
 function buildTable(lines) {
@@ -1078,7 +1079,14 @@ function parseTextChunk(text) {
   function flushList() {
     if (!listBuffer) return;
     const items = listBuffer.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-    segments.push({ type: "block", kind: "list", html: `<${listBuffer.type}>\n${items}\n</${listBuffer.type}>` });
+    segments.push({
+      type: "block",
+      kind: "list",
+      listType: listBuffer.type,
+      items: listBuffer.items.slice(),
+      numbers: listBuffer.numbers ? listBuffer.numbers.slice() : undefined,
+      html: `<${listBuffer.type}>\n${items}\n</${listBuffer.type}>`,
+    });
     listBuffer = null;
   }
 
@@ -1103,10 +1111,27 @@ function parseTextChunk(text) {
 
     const numbered = numberedParts(line);
     if (keepLists.checked && numbered) {
+      if (!numbered.intro && numbered.items.length === 1 && /^\d+[.)]\s+/u.test(line)) {
+        if (!listBuffer || listBuffer.type !== "ol") {
+          flushList();
+          listBuffer = { type: "ol", items: [], numbers: [] };
+        }
+        listBuffer.items.push(numbered.items[0]);
+        listBuffer.numbers.push(numbered.numbers[0] || listBuffer.items.length);
+        continue;
+      }
+
       flushList();
       if (numbered.intro) segments.push({ type: "line", html: formatInline(numbered.intro) });
       const items = numbered.items.map((item) => `<li>${formatInline(item)}</li>`).join("\n");
-      segments.push({ type: "block", kind: "list", html: `<ol>\n${items}\n</ol>` });
+      segments.push({
+        type: "block",
+        kind: "list",
+        listType: "ol",
+        items: numbered.items,
+        numbers: numbered.numbers,
+        html: `<ol>\n${items}\n</ol>`,
+      });
       continue;
     }
 
@@ -1646,6 +1671,17 @@ function makeButtonHtml(version, buttons) {
 function renderSegments(version, segments) {
   const rendered = [];
 
+  function segmentHtml(segment) {
+    if (segment.type === "button") return makeButtonHtml(version, segment.buttons);
+    if (version === "compact" && segment.kind === "list") {
+      return segment.items.map((item, index) => {
+        const marker = segment.listType === "ol" ? `${segment.numbers?.[index] || index + 1}.&nbsp;` : "&bull;&nbsp;";
+        return `${marker}${formatInline(item)}`;
+      }).join("<br>\n");
+    }
+    return segment.html;
+  }
+
   for (let index = 0; index < segments.length; index += 1) {
     const segment = segments[index];
     const next = segments[index + 1];
@@ -1661,7 +1697,7 @@ function renderSegments(version, segments) {
       continue;
     }
 
-    const html = segment.type === "button" ? makeButtonHtml(version, segment.buttons) : segment.html;
+    const html = segmentHtml(segment);
     if (!html) continue;
 
     if ((version === "compact" || version === "mobile") && segment.type === "button") {
