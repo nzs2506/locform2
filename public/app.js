@@ -1021,6 +1021,8 @@ function normalizeTextChunk(text) {
   const normalized = trimAfterAgeWarning(stripServiceLines(text)
     .replace(/\r\n?/g, "\n")
     .replace(/\s*Меж(?:ду)?строчный (?:интервал|пробел)\s*/giu, "\n__BRBR__\n")
+    .replace(/([:：])\s*([-*•])\s+/gu, "$1\n$2 ")
+    .replace(/([:：])\s*(\d+[.)])\s+/gu, "$1\n$2 ")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
     .trim());
@@ -1711,7 +1713,9 @@ function renderSegments(version, segments) {
     const separator = previous?.type === "line" && segment.type === "line"
       ? "<br>\n"
       : previousLineEndsWithColon && segment.kind === "list"
-        ? "\n"
+        ? version === "compact" ? "<br>\n" : "\n"
+        : version === "compact" && previous?.kind === "list"
+          ? "<br>\n"
         : "\n\n";
     if (rendered.length && rendered[rendered.length - 1] !== "<br><br>") rendered.push(separator);
     rendered.push(html);
