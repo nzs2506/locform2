@@ -1021,6 +1021,8 @@ function normalizeTextChunk(text) {
   const normalized = trimAfterAgeWarning(stripServiceLines(text)
     .replace(/\r\n?/g, "\n")
     .replace(/\s*Меж(?:ду)?строчный (?:интервал|пробел)\s*/giu, "\n__BRBR__\n")
+    .replace(/([:：])((?:<\/[biu]>\s*)+)([-*•])\s+/giu, "$1$2\n$3 ")
+    .replace(/([:：])((?:<\/[biu]>\s*)+)(\d+[.)])\s+/giu, "$1$2\n$3 ")
     .replace(/([:：])\s*([-*•])\s+/gu, "$1\n$2 ")
     .replace(/([:：])\s*(\d+[.)])\s+/gu, "$1\n$2 ")
     .replace(/[ \t]+\n/g, "\n")
@@ -1691,7 +1693,13 @@ function renderSegments(version, segments) {
 
     if (segment.type === "break") {
       if (previous?.kind === "list") {
-        if (!String(rendered[rendered.length - 1] || "").match(/<br>\s*$/)) rendered.push("\n<br>\n");
+        const listBreak = version === "compact" ? "<br><br>\n" : "\n<br>\n";
+        const lastRendered = String(rendered[rendered.length - 1] || "");
+        if (version === "compact") {
+          if (!lastRendered.includes("<br><br>")) rendered.push(listBreak);
+        } else if (!lastRendered.match(/<br>\s*$/)) {
+          rendered.push(listBreak);
+        }
         continue;
       }
       if ((version === "pc" || version === "pcMb6r") && next?.type === "button") continue;
@@ -1713,9 +1721,9 @@ function renderSegments(version, segments) {
     const separator = previous?.type === "line" && segment.type === "line"
       ? "<br>\n"
       : previousLineEndsWithColon && segment.kind === "list"
-        ? version === "compact" ? "<br>\n" : "\n"
+        ? version === "compact" ? "<br><br>\n" : "\n"
         : version === "compact" && previous?.kind === "list"
-          ? "<br>\n"
+          ? "<br><br>\n"
         : "\n\n";
     if (rendered.length && rendered[rendered.length - 1] !== "<br><br>") rendered.push(separator);
     rendered.push(html);
