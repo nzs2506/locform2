@@ -42,11 +42,9 @@ let activeImageButtonScope = "pc";
 const accessPassword = "0558";
 const accessSessionKey = "locform-auth-ok";
 const imageButtonsStorageKey = "locform-redesign-image-buttons-v2";
-const sharedImageButtonsUrl = "image-buttons.shared.json";
-const sharedImageButtonsRepo = "nzs2506/locform2";
-const sharedImageButtonsPath = "public/image-buttons.shared.json";
-const sharedImageButtonsBranch = "main";
-const sharedImageButtonsTokenKey = "locform-image-buttons-github-token";
+const sharedImageButtonsUrl = "https://locform-images.nzs2593.workers.dev/image-buttons";
+const bundledSharedImageButtonsUrl = "image-buttons.shared.json";
+const sharedImageButtonsTokenKey = "locform-image-buttons-password";
 
 const defaultImageButtonRows = [
   ["mb6r", "RUS", "\u0417\u0430 \u0441\u0442\u0440\u0430\u0445\u043e\u0432\u043a\u043e\u0439", "https://image-gallery-s3-stable.mindbox.ru/55B9273DBBF8576B47E312DCC97832B32040004CCB763326D19CDC18F8FF3123.png", "https://image-gallery-s3-stable.mindbox.ru/9AF17BC503BAE0DEC955A13C3686925C1A920BA22F3D45F4F8D2488BA3198B6D.png"],
@@ -242,37 +240,13 @@ function sharedTokenStorage() {
 }
 
 function sharedImageButtonsTokenValue() {
-  return (sharedImageButtonsToken?.value || sharedTokenStorage()?.getItem(sharedImageButtonsTokenKey) || "").trim();
+  return (sharedImageButtonsToken?.value || sharedTokenStorage()?.getItem(sharedImageButtonsTokenKey) || accessPassword || "").trim();
 }
 
 function rememberSharedImageButtonsToken() {
   const token = (sharedImageButtonsToken?.value || "").trim();
   if (!token) return;
   sharedTokenStorage()?.setItem(sharedImageButtonsTokenKey, token);
-}
-
-function base64EncodeUtf8(value) {
-  const bytes = new TextEncoder().encode(value);
-  let binary = "";
-  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-  return btoa(binary);
-}
-
-function base64DecodeUtf8(value) {
-  const binary = atob(String(value || "").replace(/\s/g, ""));
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-function imageButtonRowsFromGitHubFile(file) {
-  if (!file?.content || file.encoding !== "base64") return [];
-
-  try {
-    const parsed = JSON.parse(base64DecodeUtf8(file.content));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
 
 function imageButtonRowsForJson(rows = imageButtonRows) {
@@ -286,19 +260,28 @@ function imageButtonRowsForJson(rows = imageButtonRows) {
     ));
 }
 
+async function fetchSharedImageButtonRows() {
+  const response = await fetch(`${sharedImageButtonsUrl}?t=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Cloudflare HTTP ${response.status}`);
+
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload : (Array.isArray(payload?.rows) ? payload.rows : []);
+}
+
+async function fetchBundledSharedImageButtonRows() {
+  const response = await fetch(`${bundledSharedImageButtonsUrl}?t=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) return [];
+
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload : [];
+}
+
 async function loadSharedImageButtons(options = {}) {
   if (!window.fetch) return false;
   if (!options.silent) setSharedImageButtonsStatus("Обновляю общий список...");
 
   try {
-    const response = await fetch(`${sharedImageButtonsUrl}?t=${Date.now()}`, { cache: "no-store" });
-    if (response.status === 404) {
-      setSharedImageButtonsStatus("Общий список пока пуст, используются встроенные строки.", "muted");
-      return false;
-    }
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const sharedRows = await response.json();
+    const sharedRows = await fetchSharedImageButtonRows();
     if (!Array.isArray(sharedRows) || !sharedRows.length) {
       setSharedImageButtonsStatus("Общий список пока пуст, используются встроенные строки.", "muted");
       return false;
@@ -311,24 +294,19 @@ async function loadSharedImageButtons(options = {}) {
     setSharedImageButtonsStatus(`Загружено из общего спейса: ${sharedRows.length} строк.`, "ok");
     return true;
   } catch (error) {
+    const fallbackRows = await fetchBundledSharedImageButtonRows().catch(() => []);
+    if (fallbackRows.length) {
+      imageButtonRows = mergeImageButtonRows(defaultImageButtonRows, imageButtonRows, fallbackRows);
+      persistImageButtonRows();
+      renderImageButtonTable();
+      renderCurrentNotification();
+      setSharedImageButtonsStatus(`Cloudflare недоступен, загружен запасной список: ${fallbackRows.length} строк.`, "error");
+      return true;
+    }
+
     setSharedImageButtonsStatus(`Не удалось загрузить общий список: ${error.message}`, "error");
     return false;
   }
-}
-
-async function githubSharedImageButtonsFile(token) {
-  const url = `https://api.github.com/repos/${sharedImageButtonsRepo}/contents/${sharedImageButtonsPath}?ref=${sharedImageButtonsBranch}`;
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-
-  if (response.status === 404) return { sha: "" };
-  if (!response.ok) throw new Error(`GitHub read HTTP ${response.status}`);
-  return response.json();
 }
 
 async function saveSharedImageButtons() {
@@ -339,45 +317,35 @@ async function saveSharedImageButtons() {
 
   const token = sharedImageButtonsTokenValue();
   if (!token) {
-    setSharedImageButtonsStatus("Для записи в общий спейс нужен GitHub token.", "error");
+    setSharedImageButtonsStatus("Для записи в общий спейс нужен пароль.", "error");
     sharedImageButtonsToken?.focus();
     return;
   }
 
   rememberSharedImageButtonsToken();
   saveSharedImageButtonsBtn.disabled = true;
-  setSharedImageButtonsStatus("Сохраняю общий список в GitHub...");
+  setSharedImageButtonsStatus("Сохраняю общий список в Cloudflare...");
 
   try {
-    const existingFile = await githubSharedImageButtonsFile(token);
-    const rows = imageButtonRowsForJson(
-      mergeImageButtonRows(imageButtonRowsFromGitHubFile(existingFile), imageButtonRowsForJson())
-    );
-    const content = `${JSON.stringify(rows, null, 2)}\n`;
-    const body = {
-      message: "Update shared image buttons",
-      content: base64EncodeUtf8(content),
-      branch: sharedImageButtonsBranch,
-    };
-    if (existingFile.sha) body.sha = existingFile.sha;
-
-    const response = await fetch(`https://api.github.com/repos/${sharedImageButtonsRepo}/contents/${sharedImageButtonsPath}`, {
-      method: "PUT",
+    const rows = imageButtonRowsForJson();
+    const response = await fetch(sharedImageButtonsUrl, {
+      method: "POST",
       headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
-        "X-GitHub-Api-Version": "2022-11-28",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ password: token, rows }),
     });
 
     if (!response.ok) {
       const details = await response.json().catch(() => ({}));
-      throw new Error(details.message || `GitHub write HTTP ${response.status}`);
+      throw new Error(details.error || details.message || `Cloudflare HTTP ${response.status}`);
     }
 
-    setSharedImageButtonsStatus(`Сохранено в общий спейс: ${rows.length} строк. Pages обновится через минуту.`, "ok");
+    const payload = await response.json().catch(() => ({}));
+    const savedRows = Array.isArray(payload.rows) ? payload.rows : rows;
+    imageButtonRows = mergeImageButtonRows(defaultImageButtonRows, imageButtonRows, savedRows);
+    persistImageButtonRows();
+    setSharedImageButtonsStatus(`Сохранено в общий спейс: ${payload.count || savedRows.length} строк.`, "ok");
     renderImageButtonTable();
     renderCurrentNotification();
   } catch (error) {

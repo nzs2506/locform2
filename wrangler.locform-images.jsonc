@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "locform-images",
+  "main": "cloudflare/locform-images.js",
+  "compatibility_date": "2026-07-28",
+  "account_id": "f41d2dd6a62fac300c10e0100a267817",
+  "workers_dev": true,
+  "preview_urls": true,
+  "kv_namespaces": [
+    {
+      "binding": "IMAGE_BUTTONS",
+      "id": "bf98ad68c15f400aaefb5d91efe5d996"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

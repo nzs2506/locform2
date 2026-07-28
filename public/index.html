@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.47</title>
+  <title>LOCform 3.8.48</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.47">
+  <link rel="stylesheet" href="styles.css?v=3.8.48">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.47</h1>
+              <h1>LOCform 3.8.48</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
@@ -208,14 +208,14 @@ Old version
         <button id="imageButtonsCloseBtn" class="guide-close" type="button" aria-label="Закрыть">×</button>
       </div>
       <div class="image-buttons-body">
-        <p>Если версия, язык, текст кнопки и цвет совпадают со строкой в таблице, в Redesign вместо текстовой кнопки будет вставлена картинка. В PC строки сгруппированы по смыслу кнопки: для нового блока переводов укажите одинаковое название в колонке <b>Группа</b>. Строки без группы уйдут в серый блок <b>Без группы</b>. <b>Сохранить локально</b> оставляет изменения только в этом браузере, <b>Сохранить в общий</b> добавляет варианты в общий список для всех пользователей.</p>
+        <p>Если версия, язык, текст кнопки и цвет совпадают со строкой в таблице, в Redesign вместо текстовой кнопки будет вставлена картинка. В PC строки сгруппированы по смыслу кнопки: для нового блока переводов укажите одинаковое название в колонке <b>Группа</b>. Строки без группы уйдут в серый блок <b>Без группы</b>. <b>Сохранить локально</b> оставляет изменения только в этом браузере, <b>Сохранить в общий</b> добавляет варианты в общий список для всех пользователей через Cloudflare.</p>
         <div class="shared-image-tools">
           <div>
             <strong>Общий спейс</strong>
             <span id="sharedImageButtonsStatus">Загрузка общего списка...</span>
           </div>
           <button id="reloadSharedImageButtonsBtn" type="button">Обновить общий</button>
-          <input id="sharedImageButtonsToken" type="password" autocomplete="off" placeholder="GitHub token для записи">
+          <input id="sharedImageButtonsToken" type="password" autocomplete="off" placeholder="Пароль для записи (можно пустым)">
           <button id="saveSharedImageButtonsBtn" type="button">Сохранить в общий</button>
         </div>
         <div id="imageScopeTabs" class="image-scope-tabs" role="tablist" aria-label="Консьюмер">
@@ -249,6 +249,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.47"></script>
+  <script src="app.js?v=3.8.48"></script>
 </body>
 </html>
