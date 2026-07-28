@@ -21,6 +21,7 @@ const guideCloseBtn = document.querySelector("#guideCloseBtn");
 const imageButtonsBtn = document.querySelector("#imageButtonsBtn");
 const imageButtonsModal = document.querySelector("#imageButtonsModal");
 const imageButtonsCloseBtn = document.querySelector("#imageButtonsCloseBtn");
+const imageScopeTabs = document.querySelector("#imageScopeTabs");
 const imageButtonRowsBody = document.querySelector("#imageButtonRows");
 const addImageButtonRowBtn = document.querySelector("#addImageButtonRowBtn");
 const saveImageButtonsBtn = document.querySelector("#saveImageButtonsBtn");
@@ -33,6 +34,7 @@ const authPassword = document.querySelector("#authPassword");
 const authError = document.querySelector("#authError");
 let parsedNotifications = [];
 let activeNotificationIndex = 0;
+let activeImageButtonScope = "pc";
 const accessPassword = "0558";
 const accessSessionKey = "locform-auth-ok";
 const imageButtonsStorageKey = "locform-redesign-image-buttons-v2";
@@ -2013,19 +2015,25 @@ function normalizeRedesignSegments(segments) {
   });
 }
 
+function renderImageScopeTabs() {
+  if (!imageScopeTabs) return;
+
+  imageScopeTabs.querySelectorAll("[data-image-scope]").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.imageScope === activeImageButtonScope);
+  });
+}
+
 function renderImageButtonTable() {
   if (!imageButtonRowsBody) return;
 
-  imageButtonRowsBody.innerHTML = imageButtonRows.map((row, index) => `
-    <tr>
-      <td>
-        <select data-image-field="scope" aria-label="Версия">
-          <option value="pc"${row.scope === "pc" ? " selected" : ""}>PC</option>
-          <option value="mb6r"${row.scope === "mb6r" ? " selected" : ""}>MB6R</option>
-          <option value="mb3b"${row.scope === "mb3b" ? " selected" : ""}>MB3B</option>
-          <option value="all"${row.scope === "all" ? " selected" : ""}>Все</option>
-        </select>
-      </td>
+  renderImageScopeTabs();
+
+  const visibleRows = imageButtonRows
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => row.scope === activeImageButtonScope);
+
+  imageButtonRowsBody.innerHTML = visibleRows.map(({ row, index }) => `
+    <tr data-image-index="${index}">
       <td><input data-image-field="language" type="text" value="${escapeAttribute(row.language || "")}" placeholder="RUS / ENG / UZB"></td>
       <td><input data-image-field="text" type="text" value="${escapeAttribute(row.text)}" placeholder="Текст кнопки"></td>
       <td><input data-image-field="green" type="url" value="${escapeAttribute(row.green)}" placeholder="URL зеленой картинки"></td>
@@ -2037,23 +2045,30 @@ function renderImageButtonTable() {
   `).join("");
 }
 
-function collectImageButtonRows() {
-  if (!imageButtonRowsBody) return [];
+function syncVisibleImageButtonRows({ removeIndex = null, prune = false } = {}) {
+  if (!imageButtonRowsBody) return;
 
-  return [...imageButtonRowsBody.querySelectorAll("tr")]
-    .map((row) => {
-      const value = (field) => row.querySelector(`[data-image-field="${field}"]`)?.value || "";
-      return normalizeImageButtonRow({
-        scope: value("scope"),
-        language: value("language"),
-        text: value("text"),
-        green: value("green"),
-        white: value("white"),
-        width: value("width"),
-        height: value("height"),
-      });
-    })
-    .filter((row) => row.text && (row.green || row.white));
+  const nextRows = imageButtonRows.slice();
+  imageButtonRowsBody.querySelectorAll("tr").forEach((row) => {
+    const index = Number(row.dataset.imageIndex);
+    if (!Number.isFinite(index) || index === removeIndex) return;
+
+    const value = (field) => row.querySelector(`[data-image-field="${field}"]`)?.value || "";
+    const previous = imageButtonRows[index] || {};
+    nextRows[index] = normalizeImageButtonRow({
+      scope: previous.scope || activeImageButtonScope,
+      language: value("language"),
+      text: value("text"),
+      green: value("green"),
+      white: value("white"),
+      width: value("width"),
+      height: value("height"),
+    });
+  });
+
+  imageButtonRows = nextRows
+    .filter((_, index) => index !== removeIndex)
+    .filter((row) => !prune || (row.text && (row.green || row.white)));
 }
 
 function openImageButtons() {
@@ -2267,18 +2282,27 @@ imageButtonsCloseBtn.addEventListener("click", closeImageButtons);
 imageButtonsModal.addEventListener("click", (event) => {
   if (event.target === imageButtonsModal) closeImageButtons();
 });
+imageScopeTabs.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-image-scope]");
+  if (!tab) return;
+
+  syncVisibleImageButtonRows();
+  activeImageButtonScope = tab.dataset.imageScope;
+  renderImageButtonTable();
+});
 imageButtonRowsBody.addEventListener("click", (event) => {
   const remove = event.target.closest("[data-image-remove]");
   if (!remove) return;
-  imageButtonRows.splice(Number(remove.dataset.imageRemove), 1);
+  syncVisibleImageButtonRows({ removeIndex: Number(remove.dataset.imageRemove) });
   renderImageButtonTable();
 });
 addImageButtonRowBtn.addEventListener("click", () => {
-  imageButtonRows.push(normalizeImageButtonRow({ scope: "pc", language: "", text: "", green: "", white: "", width: 319, height: 40 }));
+  syncVisibleImageButtonRows();
+  imageButtonRows.push(normalizeImageButtonRow({ scope: activeImageButtonScope, language: "", text: "", green: "", white: "", width: 319, height: 40 }));
   renderImageButtonTable();
 });
 saveImageButtonsBtn.addEventListener("click", () => {
-  imageButtonRows = collectImageButtonRows();
+  syncVisibleImageButtonRows({ prune: true });
   persistImageButtonRows();
   renderImageButtonTable();
   renderCurrentNotification();

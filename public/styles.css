@@ -82,6 +82,8 @@ button:hover {
 
 .pane-head {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 10px;
   padding: 16px;
   border-bottom: 1px solid var(--line);
@@ -128,6 +130,13 @@ h1 {
   color: var(--green-dark);
   font-size: 12px;
   font-weight: 700;
+}
+
+.pane-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 h2 {
@@ -501,7 +510,7 @@ textarea {
 
 .image-buttons-body {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 12px;
   min-height: 0;
   padding: 16px;
@@ -513,6 +522,25 @@ textarea {
   font-size: 13px;
 }
 
+.image-scope-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.image-scope-tab {
+  min-width: 78px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-weight: 700;
+}
+
+.image-scope-tab.active {
+  background: #111713;
+  border-color: #111713;
+  color: #ffffff;
+}
+
 .image-buttons-table-wrap {
   min-height: 0;
   overflow: auto;
@@ -522,7 +550,7 @@ textarea {
 
 .image-buttons-table {
   width: 100%;
-  min-width: 1140px;
+  min-width: 1040px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -557,28 +585,23 @@ textarea {
 
 .image-buttons-table th:nth-child(1),
 .image-buttons-table td:nth-child(1) {
-  width: 92px;
+  width: 100px;
 }
 
 .image-buttons-table th:nth-child(2),
 .image-buttons-table td:nth-child(2) {
-  width: 100px;
-}
-
-.image-buttons-table th:nth-child(3),
-.image-buttons-table td:nth-child(3) {
   width: 180px;
 }
 
+.image-buttons-table th:nth-child(5),
+.image-buttons-table td:nth-child(5),
 .image-buttons-table th:nth-child(6),
-.image-buttons-table td:nth-child(6),
-.image-buttons-table th:nth-child(7),
-.image-buttons-table td:nth-child(7) {
+.image-buttons-table td:nth-child(6) {
   width: 78px;
 }
 
-.image-buttons-table th:nth-child(8),
-.image-buttons-table td:nth-child(8) {
+.image-buttons-table th:nth-child(7),
+.image-buttons-table td:nth-child(7) {
   width: 48px;
   text-align: center;
 }
@@ -619,6 +642,14 @@ textarea {
   .editor-pane,
   .results-pane {
     min-height: 540px;
+  }
+
+  .pane-head {
+    grid-template-columns: 1fr;
+  }
+
+  .pane-actions {
+    justify-content: flex-start;
   }
 
   .key-tabs {

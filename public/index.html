@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.42</title>
+  <title>LOCform 3.8.43</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.42">
+  <link rel="stylesheet" href="styles.css?v=3.8.43">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,13 +27,15 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.42</h1>
+              <h1>LOCform 3.8.43</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
-              <button id="imageButtonsBtn" class="image-buttons-button" type="button" aria-haspopup="dialog" aria-controls="imageButtonsModal" title="Картинки для redesign">Картинки</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
           </div>
-          <button id="convertBtn" type="button">Преобразовать</button>
+          <div class="pane-actions">
+            <button id="imageButtonsBtn" class="image-buttons-button" type="button" aria-haspopup="dialog" aria-controls="imageButtonsModal" title="Картинки для redesign">Картинки</button>
+            <button id="convertBtn" type="button">Преобразовать</button>
+          </div>
         </div>
 
         <div class="textarea-wrap">
@@ -207,11 +209,15 @@ Old version
       </div>
       <div class="image-buttons-body">
         <p>Если версия, язык, текст кнопки и цвет совпадают со строкой в таблице, в Redesign вместо текстовой кнопки будет вставлена картинка. Если строки нет, останется обычная текстовая кнопка.</p>
+        <div id="imageScopeTabs" class="image-scope-tabs" role="tablist" aria-label="Консьюмер">
+          <button class="image-scope-tab active" type="button" data-image-scope="pc">PC</button>
+          <button class="image-scope-tab" type="button" data-image-scope="mb6r">MB6R</button>
+          <button class="image-scope-tab" type="button" data-image-scope="mb3b">MB3B</button>
+        </div>
         <div class="image-buttons-table-wrap">
           <table class="image-buttons-table">
             <thead>
               <tr>
-                <th>Версия</th>
                 <th>Язык</th>
                 <th>Текст кнопки</th>
                 <th>Зеленая картинка</th>
@@ -233,6 +239,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.42"></script>
+  <script src="app.js?v=3.8.43"></script>
 </body>
 </html>
