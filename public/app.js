@@ -187,6 +187,7 @@ function normalizeImageButtonRow(row) {
     scope: /^(?:pc|mb6r|mb3b|all)$/i.test(row?.scope || "") ? String(row.scope).toLowerCase() : "all",
     language: normalizeImageButtonLanguage(row?.language || ""),
     text: String(row?.text || "").replace(/\s+/g, " ").trim(),
+    group: String(row?.group || "").replace(/\s+/g, " ").trim(),
     green: cleanUrl(row?.green || ""),
     white: cleanUrl(row?.white || ""),
     width: Math.max(1, Number.parseInt(row?.width, 10) || 319),
@@ -291,10 +292,22 @@ function imageButtonLanguageRank(language) {
 }
 
 function pcImageButtonGroupFor(row) {
-  return pcImageButtonGroupByText.get(imageButtonTextKey(row.text)) || {
+  const knownGroup = pcImageButtonGroupByText.get(imageButtonTextKey(row.text));
+  const customGroup = String(row.group || "").replace(/\s+/g, " ").trim();
+  if (customGroup && (!knownGroup || customGroup !== knownGroup.label)) {
+    return {
+      id: `custom:${imageButtonTextKey(customGroup)}`,
+      label: customGroup,
+      index: pcImageButtonGroups.length + 1,
+      custom: true,
+    };
+  }
+
+  return knownGroup || {
     id: "other",
-    label: "Другое",
-    index: pcImageButtonGroups.length,
+    label: "Без группы",
+    index: pcImageButtonGroups.length + 1000,
+    other: true,
   };
 }
 
@@ -2092,6 +2105,7 @@ function renderImageButtonTable() {
       .map((item) => ({ ...item, group: pcImageButtonGroupFor(item.row) }))
       .sort((a, b) => (
         a.group.index - b.group.index ||
+        a.group.label.localeCompare(b.group.label) ||
         imageButtonLanguageRank(a.row.language) - imageButtonLanguageRank(b.row.language) ||
         imageButtonTextKey(a.row.text).localeCompare(imageButtonTextKey(b.row.text))
       ))
@@ -2099,8 +2113,9 @@ function renderImageButtonTable() {
 
   let lastGroupId = "";
   imageButtonRowsBody.innerHTML = displayRows.map(({ row, index, group }) => {
+    const inheritedGroupLabel = activeImageButtonScope === "pc" && group && !group.other ? group.label : "";
     const groupHead = group && group.id !== lastGroupId
-      ? `<tr class="image-group-row"><td colspan="7">${escapeHtml(group.label)}</td></tr>`
+      ? `<tr class="image-group-row${group.other ? " image-group-row-empty" : ""}"><td colspan="8">${escapeHtml(group.label)}</td></tr>`
       : "";
     if (group) lastGroupId = group.id;
 
@@ -2108,6 +2123,7 @@ function renderImageButtonTable() {
     <tr data-image-index="${index}">
       <td><input data-image-field="language" type="text" value="${escapeAttribute(row.language || "")}" placeholder="RUS / ENG / UZB"></td>
       <td><input data-image-field="text" type="text" value="${escapeAttribute(row.text)}" placeholder="Текст кнопки"></td>
+      <td><input data-image-field="group" type="text" value="${escapeAttribute(row.group || inheritedGroupLabel)}" placeholder="Напр. Подробнее / More Info"${activeImageButtonScope === "pc" ? "" : " disabled"}></td>
       <td><input data-image-field="green" type="url" value="${escapeAttribute(row.green)}" placeholder="URL зеленой картинки"></td>
       <td><input data-image-field="white" type="url" value="${escapeAttribute(row.white)}" placeholder="URL белой картинки"></td>
       <td><input data-image-field="width" type="number" min="1" value="${row.width || 319}"></td>
@@ -2132,6 +2148,7 @@ function syncVisibleImageButtonRows({ removeIndex = null, prune = false } = {}) 
       scope: previous.scope || activeImageButtonScope,
       language: value("language"),
       text: value("text"),
+      group: previous.scope === "pc" || activeImageButtonScope === "pc" ? value("group") : previous.group,
       green: value("green"),
       white: value("white"),
       width: value("width"),
@@ -2371,7 +2388,7 @@ imageButtonRowsBody.addEventListener("click", (event) => {
 });
 addImageButtonRowBtn.addEventListener("click", () => {
   syncVisibleImageButtonRows();
-  imageButtonRows.push(normalizeImageButtonRow({ scope: activeImageButtonScope, language: "", text: "", green: "", white: "", width: 319, height: 40 }));
+  imageButtonRows.push(normalizeImageButtonRow({ scope: activeImageButtonScope, language: "", text: "", group: "", green: "", white: "", width: 319, height: 40 }));
   renderImageButtonTable();
 });
 saveImageButtonsBtn.addEventListener("click", () => {

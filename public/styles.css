@@ -550,7 +550,7 @@ textarea {
 
 .image-buttons-table {
   width: 100%;
-  min-width: 1040px;
+  min-width: 1240px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
@@ -582,6 +582,11 @@ textarea {
   font-weight: 700;
 }
 
+.image-group-row-empty td {
+  background: #f3f5f2;
+  color: #667066;
+}
+
 .image-buttons-table select,
 .image-buttons-table input {
   width: 100%;
@@ -603,15 +608,20 @@ textarea {
   width: 180px;
 }
 
-.image-buttons-table th:nth-child(5),
-.image-buttons-table td:nth-child(5),
+.image-buttons-table th:nth-child(3),
+.image-buttons-table td:nth-child(3) {
+  width: 220px;
+}
+
 .image-buttons-table th:nth-child(6),
-.image-buttons-table td:nth-child(6) {
+.image-buttons-table td:nth-child(6),
+.image-buttons-table th:nth-child(7),
+.image-buttons-table td:nth-child(7) {
   width: 78px;
 }
 
-.image-buttons-table th:nth-child(7),
-.image-buttons-table td:nth-child(7) {
+.image-buttons-table th:nth-child(8),
+.image-buttons-table td:nth-child(8) {
   width: 48px;
   text-align: center;
 }
