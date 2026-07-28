@@ -243,6 +243,61 @@ function imageButtonScopeForVersion(version) {
   return "";
 }
 
+const imageButtonLanguageOrder = ["RUS", "ENG", "UZB", "ES_LATAM", "AZ"];
+const pcImageButtonGroups = [
+  {
+    id: "insurance",
+    label: "За страховкой / Insure Your Bet",
+    texts: ["За страховкой", "Insure Your Bet", "Stavkani sug'urtalash", "Apuesta segura", "Mərclərinizi sığortalayın"],
+  },
+  {
+    id: "claim-free-bet",
+    label: "За фрибетом / Claim Free Bet",
+    texts: ["За фрибетом", "Claim Free Bet", "Fribetni olish", "Apuesta Gratis", "Fribet əldə edin"],
+  },
+  {
+    id: "top-up",
+    label: "Пополнить счёт / Deposit",
+    texts: ["Пополнить счёт", "Deposit", "Depositar"],
+  },
+  {
+    id: "deposit",
+    label: "Внести депозит / Make A Deposit",
+    texts: ["Внести депозит", "Make A Deposit", "Depozit qo'yish", "Hacer un depósito", "Depozit qoyun"],
+  },
+  {
+    id: "more-info",
+    label: "Подробнее / More Info",
+    texts: ["Подробнее", "More Info", "Batafsil", "Más información", "Ətraflı məlumat"],
+  },
+  {
+    id: "claim-bonus",
+    label: "Получить бонус / Claim Bonus",
+    texts: ["Получить бонус", "Claim Bonus"],
+  },
+  {
+    id: "sportsbook",
+    label: "Перейти в линию / Go To Sportsbook",
+    texts: ["Перейти в линию", "Go To Sportsbook"],
+  },
+];
+const pcImageButtonGroupByText = new Map(
+  pcImageButtonGroups.flatMap((group, index) => group.texts.map((text) => [imageButtonTextKey(text), { ...group, index }]))
+);
+
+function imageButtonLanguageRank(language) {
+  const index = imageButtonLanguageOrder.indexOf(normalizeImageButtonLanguage(language));
+  return index === -1 ? imageButtonLanguageOrder.length : index;
+}
+
+function pcImageButtonGroupFor(row) {
+  return pcImageButtonGroupByText.get(imageButtonTextKey(row.text)) || {
+    id: "other",
+    label: "Другое",
+    index: pcImageButtonGroups.length,
+  };
+}
+
 function imageButtonEntryFor(version, button, allowImageButtons = true, language = "") {
   const scope = imageButtonScopeForVersion(version);
   if (!allowImageButtons || !scope) return null;
@@ -2032,7 +2087,24 @@ function renderImageButtonTable() {
     .map((row, index) => ({ row, index }))
     .filter(({ row }) => row.scope === activeImageButtonScope);
 
-  imageButtonRowsBody.innerHTML = visibleRows.map(({ row, index }) => `
+  const displayRows = activeImageButtonScope === "pc"
+    ? visibleRows
+      .map((item) => ({ ...item, group: pcImageButtonGroupFor(item.row) }))
+      .sort((a, b) => (
+        a.group.index - b.group.index ||
+        imageButtonLanguageRank(a.row.language) - imageButtonLanguageRank(b.row.language) ||
+        imageButtonTextKey(a.row.text).localeCompare(imageButtonTextKey(b.row.text))
+      ))
+    : visibleRows;
+
+  let lastGroupId = "";
+  imageButtonRowsBody.innerHTML = displayRows.map(({ row, index, group }) => {
+    const groupHead = group && group.id !== lastGroupId
+      ? `<tr class="image-group-row"><td colspan="7">${escapeHtml(group.label)}</td></tr>`
+      : "";
+    if (group) lastGroupId = group.id;
+
+    return `${groupHead}
     <tr data-image-index="${index}">
       <td><input data-image-field="language" type="text" value="${escapeAttribute(row.language || "")}" placeholder="RUS / ENG / UZB"></td>
       <td><input data-image-field="text" type="text" value="${escapeAttribute(row.text)}" placeholder="Текст кнопки"></td>
@@ -2042,7 +2114,8 @@ function renderImageButtonTable() {
       <td><input data-image-field="height" type="number" min="1" value="${row.height || 40}"></td>
       <td><button class="image-row-remove" type="button" data-image-remove="${index}" aria-label="Удалить строку">×</button></td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
 }
 
 function syncVisibleImageButtonRows({ removeIndex = null, prune = false } = {}) {

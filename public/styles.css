@@ -408,7 +408,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 12px;
   background: rgba(17, 20, 17, 0.42);
 }
 
@@ -498,8 +498,8 @@ textarea {
 .image-buttons-modal {
   display: flex;
   flex-direction: column;
-  width: min(1180px, calc(100vw - 32px));
-  height: min(780px, calc(100vh - 24px));
+  width: min(1500px, calc(100vw - 24px));
+  height: min(940px, calc(100vh - 24px));
   max-height: calc(100vh - 24px);
   overflow: hidden;
   border: 1px solid var(--line);
@@ -566,9 +566,19 @@ textarea {
 .image-buttons-table th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
   background: #fbfcfa;
   color: var(--muted);
+  font-weight: 700;
+}
+
+.image-group-row td {
+  position: sticky;
+  top: 49px;
+  z-index: 1;
+  padding: 9px 10px;
+  background: #eef6f1;
+  color: #123c25;
   font-weight: 700;
 }
 
