@@ -121,6 +121,15 @@ h1 {
   line-height: 1;
 }
 
+.image-buttons-button {
+  min-height: 26px;
+  padding: 0 10px;
+  border-color: var(--green);
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 h2 {
   font-size: 16px;
   line-height: 1.25;
@@ -475,6 +484,121 @@ textarea {
   padding: 0;
   background: transparent;
   white-space: pre;
+}
+
+.image-buttons-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, calc(100vw - 32px));
+  height: min(780px, calc(100vh - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(17, 20, 17, 0.22);
+}
+
+.image-buttons-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px;
+}
+
+.image-buttons-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.image-buttons-table-wrap {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.image-buttons-table {
+  width: 100%;
+  min-width: 1060px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.image-buttons-table th,
+.image-buttons-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.image-buttons-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fbfcfa;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.image-buttons-table select,
+.image-buttons-table input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.image-buttons-table th:nth-child(1),
+.image-buttons-table td:nth-child(1) {
+  width: 92px;
+}
+
+.image-buttons-table th:nth-child(2),
+.image-buttons-table td:nth-child(2) {
+  width: 180px;
+}
+
+.image-buttons-table th:nth-child(5),
+.image-buttons-table td:nth-child(5),
+.image-buttons-table th:nth-child(6),
+.image-buttons-table td:nth-child(6) {
+  width: 78px;
+}
+
+.image-buttons-table th:nth-child(7),
+.image-buttons-table td:nth-child(7) {
+  width: 48px;
+  text-align: center;
+}
+
+.image-row-remove {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.image-buttons-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#saveImageButtonsBtn {
+  background: var(--green);
+  border-color: var(--green);
+  color: #ffffff;
+  font-weight: 700;
 }
 
 @media (max-width: 920px) {

@@ -17,6 +17,13 @@ const copyTopicKeyBtn = document.querySelector("#copyTopicKeyBtn");
 const guideBtn = document.querySelector("#guideBtn");
 const guideModal = document.querySelector("#guideModal");
 const guideCloseBtn = document.querySelector("#guideCloseBtn");
+const imageButtonsBtn = document.querySelector("#imageButtonsBtn");
+const imageButtonsModal = document.querySelector("#imageButtonsModal");
+const imageButtonsCloseBtn = document.querySelector("#imageButtonsCloseBtn");
+const imageButtonRowsBody = document.querySelector("#imageButtonRows");
+const addImageButtonRowBtn = document.querySelector("#addImageButtonRowBtn");
+const saveImageButtonsBtn = document.querySelector("#saveImageButtonsBtn");
+const resetImageButtonsBtn = document.querySelector("#resetImageButtonsBtn");
 const preview = document.querySelector("#preview");
 const authGate = document.querySelector("#authGate");
 const appShell = document.querySelector("#appShell");
@@ -27,6 +34,67 @@ let parsedNotifications = [];
 let activeNotificationIndex = 0;
 const accessPassword = "0558";
 const accessSessionKey = "locform-auth-ok";
+const imageButtonsStorageKey = "locform-redesign-image-buttons";
+
+const defaultImageButtonRows = [
+  {
+    scope: "pc",
+    text: "Получить бонус",
+    green: "https://image-gallery-s3-stable.mindbox.ru/621868E7732A68406F11F2AC6F040862F8F22939E6B949B4B0BD444E10D3C06C.png",
+    white: "",
+    width: 319,
+    height: 40,
+  },
+  {
+    scope: "pc",
+    text: "Подробнее",
+    green: "",
+    white: "https://image-gallery-s3-stable.mindbox.ru/C5E60D0EA93987129C85A8C86452DD1389745A2A3763DEC746496B5B51201F45.png",
+    width: 319,
+    height: 40,
+  },
+  {
+    scope: "pc",
+    text: "Внести депозит",
+    green: "https://image-gallery-s3-stable.mindbox.ru/F3D7656DC4D33E4DB51D96BD72260E6FA4857B15D0DCBEA615EA56753A482B84.png",
+    white: "",
+    width: 319,
+    height: 40,
+  },
+  {
+    scope: "mb6r",
+    text: "За страховкой",
+    green: "https://image-gallery-s3-stable.mindbox.ru/55B9273DBBF8576B47E312DCC97832B32040004CCB763326D19CDC18F8FF3123.png",
+    white: "https://image-gallery-s3-stable.mindbox.ru/9AF17BC503BAE0DEC955A13C3686925C1A920BA22F3D45F4F8D2488BA3198B6D.png",
+    width: 319,
+    height: 40,
+  },
+  {
+    scope: "mb6r",
+    text: "За фрибетом",
+    green: "https://image-gallery-s3-stable.mindbox.ru/57E0CA10B3DA23DC10665D556A1815BFCAF78D674499F8AC8F1FA1D2F3A6BCED.png",
+    white: "https://image-gallery-s3-stable.mindbox.ru/F27858984E73AC90311B07E4B51EE7805F90D34C216C7CAE0BEECBC9EDAB5726.png",
+    width: 319,
+    height: 40,
+  },
+  {
+    scope: "mb6r",
+    text: "Пополнить счёт",
+    green: "https://image-gallery-s3-stable.mindbox.ru/10D97D0D0632417294939F7A7DE032CEB4083997C4B61A1218FAB717DE20CF2A.png",
+    white: "https://image-gallery-s3-stable.mindbox.ru/4634C2BDABFF7B46BFFE508424615BBA250FFC7DDADECA559D2D053681D48DEB.png",
+    width: 319,
+    height: 40,
+  },
+  {
+    scope: "mb6r",
+    text: "Внести депозит",
+    green: "https://image-gallery-s3-stable.mindbox.ru/111846CFD90AE938CABD312C93AB092B85689705B88D33AB8D596F822D8CE226.png",
+    white: "https://image-gallery-s3-stable.mindbox.ru/35C0F1BED421F6E8D1F112347E4D850BC6C7C5311EF2D272274FA6C8158F4AF9.png",
+    width: 319,
+    height: 40,
+  },
+];
+let imageButtonRows = loadImageButtonRows();
 
 const stableNames = [
   "Drops & Wins",
@@ -66,6 +134,10 @@ function escapeHtml(value) {
     .replace(/&(?!(?:nbsp|amp|lt|gt|quot|#39);)/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(String(value || "")).replace(/"/g, "&quot;");
 }
 
 function restoreAllowedTags(value) {
@@ -112,6 +184,85 @@ function cleanUrl(raw) {
 
 function cleanMatchedUrl(raw) {
   return cleanUrl(String(raw || "").replace(/\)+$/g, ""));
+}
+
+function imageButtonStorage() {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeImageButtonRow(row) {
+  return {
+    scope: /^(?:pc|mb6r|all)$/i.test(row?.scope || "") ? String(row.scope).toLowerCase() : "all",
+    text: String(row?.text || "").replace(/\s+/g, " ").trim(),
+    green: cleanUrl(row?.green || ""),
+    white: cleanUrl(row?.white || ""),
+    width: Math.max(1, Number.parseInt(row?.width, 10) || 319),
+    height: Math.max(1, Number.parseInt(row?.height, 10) || 40),
+  };
+}
+
+function loadImageButtonRows() {
+  const storage = imageButtonStorage();
+  if (!storage) return defaultImageButtonRows.map(normalizeImageButtonRow);
+
+  try {
+    const saved = JSON.parse(storage.getItem(imageButtonsStorageKey) || "null");
+    if (Array.isArray(saved)) {
+      const rows = saved.map(normalizeImageButtonRow).filter((row) => row.text && (row.green || row.white));
+      if (rows.length) return rows;
+    }
+  } catch {
+    // Ignore broken local edits and fall back to the shipped table.
+  }
+
+  return defaultImageButtonRows.map(normalizeImageButtonRow);
+}
+
+function persistImageButtonRows() {
+  const storage = imageButtonStorage();
+  if (!storage) return;
+  storage.setItem(imageButtonsStorageKey, JSON.stringify(imageButtonRows));
+}
+
+function imageButtonTextKey(value) {
+  return stripTagsWithSpaces(value)
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function imageButtonScopeForVersion(version) {
+  if (version === "pcMb6r") return "mb6r";
+  if (version === "pc") return "pc";
+  return "";
+}
+
+function imageButtonEntryFor(version, button, allowImageButtons = true) {
+  const scope = imageButtonScopeForVersion(version);
+  if (!allowImageButtons || !scope) return null;
+
+  const key = imageButtonTextKey(button.text);
+  if (!key) return null;
+
+  const candidates = imageButtonRows
+    .filter((row) => imageButtonTextKey(row.text) === key)
+    .filter((row) => row[button.color])
+    .sort((a, b) => {
+      const rank = (row) => (row.scope === scope ? 0 : row.scope === "all" ? 1 : 2);
+      return rank(a) - rank(b);
+    });
+
+  return candidates[0] || null;
+}
+
+function buttonSegmentHasRedesignImage(version, segment, options = {}) {
+  if (segment?.type !== "button") return false;
+  return segment.buttons.some((button) => imageButtonEntryFor(version, button, options.allowImageButtons !== false));
 }
 
 function findUrlMatches(value) {
@@ -182,6 +333,7 @@ function normalizeInputText(value) {
   return String(value || "")
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
+    .replace(/(^|\n)\s*old\s*(?=\n|$)/giu, "$1Old version")
     .replace(/(^|\n)\s*(?:<\/[bi]>\s*)+/gi, "$1")
     .replace(new RegExp(`([^\\n])\\s*((?:<[^>]+>\\s*)*${buttonWords}(?:\\s*<\\/[^>]+>)*)\\s*(?=\\n|$)`, "giu"), "$1\n$2")
     .replace(new RegExp(`((?:https?:\\/\\/|\\/)[^\\n\\s]+?)(?=${buttonWords}\\s*:?)`, "giu"), "$1\n")
@@ -784,6 +936,11 @@ function isDiscardedServiceLabel(line) {
   return /^(?:MB6R|MB3B|PC)$/i.test(plainOutputText(line));
 }
 
+function platformHeader(line) {
+  const match = plainOutputText(line).match(/^(MB6R|MB3B|PC)\b/i);
+  return match ? match[1].toUpperCase() : "";
+}
+
 function isLineBreakInstruction(line) {
   return /^\u041c\u0435\u0436(?:\u0434\u0443)?\u0441\u0442\u0440\u043e\u0447\u043d\u044b\u0439\s+(?:\u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b|\u043f\u0440\u043e\u0431\u0435\u043b)$/iu.test(plainOutputText(line));
 }
@@ -850,6 +1007,8 @@ function parseNotifications(text) {
   let key = "";
   let sectionLanguage = "";
   let sectionTopic = "";
+  let platform = "";
+  let sectionPlatform = "";
   let body = [];
   let awaitingTopicFor = "";
   let awaitingTopicLanguage = "";
@@ -879,6 +1038,7 @@ function parseNotifications(text) {
     sections.push({
       key,
       language: effectiveLanguage,
+      platform: sectionPlatform || platform,
       topic: sectionTopic || topics[topicKey(key, effectiveLanguage)] || topics[topicKey(key, "")] || "",
       body: body.join("\n").trim(),
     });
@@ -887,16 +1047,23 @@ function parseNotifications(text) {
   for (const raw of lines) {
     const plain = stripTags(raw);
     const nextLanguage = languageHeader(raw);
+    const nextPlatform = platformHeader(raw);
 
-    if (isDiscardedServiceLabel(raw)) continue;
+    if (isDiscardedServiceLabel(raw)) {
+      platform = nextPlatform;
+      if (key && !body.some((line) => stripTagsWithSpaces(line))) sectionPlatform = platform;
+      continue;
+    }
     if (isLineBreakInstruction(raw) && (awaitingTopicFor || (key && !body.some((line) => stripTagsWithSpaces(line))))) continue;
 
     if (nextLanguage) {
       if (key) save();
       language = nextLanguage;
+      platform = nextPlatform || "";
       key = "";
       sectionLanguage = "";
       sectionTopic = "";
+      sectionPlatform = "";
       body = [];
       awaitingTopicFor = "";
       awaitingTopicLanguage = "";
@@ -913,6 +1080,7 @@ function parseNotifications(text) {
         key = "";
         sectionLanguage = "";
         sectionTopic = "";
+        sectionPlatform = "";
         body = [];
         continue;
       }
@@ -922,6 +1090,7 @@ function parseNotifications(text) {
       key = plain;
       sectionLanguage = queuedTopic?.language || language;
       sectionTopic = queuedTopic?.topic || "";
+      sectionPlatform = platform;
       body = [];
       awaitingTopicFor = "";
       continue;
@@ -1605,15 +1774,41 @@ function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
   return normalizeButtonBlocks(text);
 }
 
-function makeButtonHtml(version, buttons) {
+function makeButtonHtml(version, buttons, options = {}) {
   if (!buttons.length) return "";
 
   const green = buttons.find((button) => button.color === "green");
   const white = buttons.find((button) => button.color === "white");
   const safeText = (value) => applyNbsp(restoreAllowedTags(escapeHtml(value)), false);
+  const safeAttr = (value) => escapeAttribute(value);
   const visibleLength = (value) => stripTagsWithSpaces(value).length;
   const compactSize = (button) => (visibleLength(button.text) > 20 ? "width: 180px; height: 35px;" : "width: 140px; height: 25px;");
   const redesignAccent = version === "pcMb6r" ? "#00B777" : "#01B462";
+  const allowImageButtons = options.allowImageButtons !== false;
+  const redesignTextAnchor = (button, index = 0) => {
+    const isWhite = button.color === "white";
+    const margin = index ? "\n\n  " : "";
+    return `${margin}<a href="${button.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${isWhite ? "transparent" : redesignAccent}; color: ${isWhite ? redesignAccent : "#FFFFFF"}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: ${isWhite ? `2px solid ${redesignAccent}` : "none"};">\n    ${safeText(button.text)}\n  </a>`;
+  };
+  const redesignImageAnchor = (button, entry, index = 0) => {
+    const imageUrl = entry[button.color];
+    const width = entry.width || 319;
+    const height = entry.height || 40;
+    const margin = index ? `12px auto 0` : "0 auto";
+
+    return `<a href="${button.url}" target="_blank" style="display:block; width:${width}px; max-width:100%; margin:${margin}; padding:0; border:0; text-decoration:none;"><img src="${imageUrl}" width="${width}" height="${height}" alt="${safeAttr(button.text)}" style="display:block; width:${width}px; max-width:100%; height:${height}px; border:0; outline:none; text-decoration:none;"></a>`;
+  };
+
+  if ((version === "pc" || version === "pcMb6r") && allowImageButtons) {
+    const imageEntries = buttons.map((button) => imageButtonEntryFor(version, button, allowImageButtons));
+    if (imageEntries.some(Boolean)) {
+      return buttons.map((button, index) => (
+        imageEntries[index]
+          ? redesignImageAnchor(button, imageEntries[index], index)
+          : redesignTextAnchor(button, index)
+      )).join("\n");
+    }
+  }
 
   const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
   if (buttons.length > 2 || hasDuplicateColors) {
@@ -1672,11 +1867,11 @@ function makeButtonHtml(version, buttons) {
   return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  <a href="${green.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${redesignAccent}; color: #FFFFFF; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: none;">\n    ${safeText(green.text)}\n  </a>\n\n  <a href="${white.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: transparent; color: ${redesignAccent}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: 2px solid ${redesignAccent};">\n    ${safeText(white.text)}\n  </a>\n\n</div>`;
 }
 
-function renderSegments(version, segments) {
+function renderSegments(version, segments, options = {}) {
   const rendered = [];
 
   function segmentHtml(segment) {
-    if (segment.type === "button") return makeButtonHtml(version, segment.buttons);
+    if (segment.type === "button") return makeButtonHtml(version, segment.buttons, options);
     if (version === "compact" && segment.kind === "list") {
       return segment.items.map((item, index) => {
         const marker = segment.listType === "ol" ? `${segment.numbers?.[index] || index + 1}.&nbsp;` : "&bull;&nbsp;";
@@ -1702,7 +1897,12 @@ function renderSegments(version, segments) {
         }
         continue;
       }
-      if ((version === "pc" || version === "pcMb6r") && next?.type === "button") continue;
+      if ((version === "pc" || version === "pcMb6r") && next?.type === "button") {
+        if (buttonSegmentHasRedesignImage(version, next, options) && !String(rendered[rendered.length - 1] || "").includes("<br><br>")) {
+          rendered.push("\n\n<br><br>\n\n");
+        }
+        continue;
+      }
       if (!String(rendered[rendered.length - 1] || "").includes("<br><br>")) rendered.push("\n\n<br><br>\n\n");
       continue;
     }
@@ -1782,6 +1982,55 @@ function normalizeRedesignSegments(segments) {
   });
 }
 
+function renderImageButtonTable() {
+  if (!imageButtonRowsBody) return;
+
+  imageButtonRowsBody.innerHTML = imageButtonRows.map((row, index) => `
+    <tr>
+      <td>
+        <select data-image-field="scope" aria-label="Версия">
+          <option value="pc"${row.scope === "pc" ? " selected" : ""}>PC</option>
+          <option value="mb6r"${row.scope === "mb6r" ? " selected" : ""}>MB6R</option>
+          <option value="all"${row.scope === "all" ? " selected" : ""}>Оба</option>
+        </select>
+      </td>
+      <td><input data-image-field="text" type="text" value="${escapeAttribute(row.text)}" placeholder="Текст кнопки"></td>
+      <td><input data-image-field="green" type="url" value="${escapeAttribute(row.green)}" placeholder="URL зеленой картинки"></td>
+      <td><input data-image-field="white" type="url" value="${escapeAttribute(row.white)}" placeholder="URL белой картинки"></td>
+      <td><input data-image-field="width" type="number" min="1" value="${row.width || 319}"></td>
+      <td><input data-image-field="height" type="number" min="1" value="${row.height || 40}"></td>
+      <td><button class="image-row-remove" type="button" data-image-remove="${index}" aria-label="Удалить строку">×</button></td>
+    </tr>
+  `).join("");
+}
+
+function collectImageButtonRows() {
+  if (!imageButtonRowsBody) return [];
+
+  return [...imageButtonRowsBody.querySelectorAll("tr")]
+    .map((row) => {
+      const value = (field) => row.querySelector(`[data-image-field="${field}"]`)?.value || "";
+      return normalizeImageButtonRow({
+        scope: value("scope"),
+        text: value("text"),
+        green: value("green"),
+        white: value("white"),
+        width: value("width"),
+        height: value("height"),
+      });
+    })
+    .filter((row) => row.text && (row.green || row.white));
+}
+
+function openImageButtons() {
+  renderImageButtonTable();
+  imageButtonsModal.hidden = false;
+}
+
+function closeImageButtons() {
+  imageButtonsModal.hidden = true;
+}
+
 function renderKeyTabs() {
   if (!parsedNotifications.length) {
     keyTabs.innerHTML = '<span class="key-empty">Ключи появятся после преобразования</span>';
@@ -1815,11 +2064,14 @@ function renderCurrentNotification() {
   const redesignRenderSegments = redesignSegments.some((segment) => segment.type === "button")
     ? normalizeRedesignSegments(redesignSegments)
     : normalizeRedesignSegments(oldSegments);
+  const renderOptions = {
+    allowImageButtons: String(section.platform || "").toUpperCase() !== "MB3B",
+  };
 
   outputs.compact.value = renderSegments("compact", oldSegments);
   outputs.mobile.value = renderSegments("mobile", oldSegments);
-  outputs.pc.value = renderSegments("pc", redesignRenderSegments);
-  outputs.pcMb6r.value = renderSegments("pcMb6r", redesignRenderSegments);
+  outputs.pc.value = renderSegments("pc", redesignRenderSegments, renderOptions);
+  outputs.pcMb6r.value = renderSegments("pcMb6r", redesignRenderSegments, renderOptions);
 
   updatePreview();
 }
@@ -1974,8 +2226,36 @@ guideCloseBtn.addEventListener("click", closeGuide);
 guideModal.addEventListener("click", (event) => {
   if (event.target === guideModal) closeGuide();
 });
+imageButtonsBtn.addEventListener("click", openImageButtons);
+imageButtonsCloseBtn.addEventListener("click", closeImageButtons);
+imageButtonsModal.addEventListener("click", (event) => {
+  if (event.target === imageButtonsModal) closeImageButtons();
+});
+imageButtonRowsBody.addEventListener("click", (event) => {
+  const remove = event.target.closest("[data-image-remove]");
+  if (!remove) return;
+  imageButtonRows.splice(Number(remove.dataset.imageRemove), 1);
+  renderImageButtonTable();
+});
+addImageButtonRowBtn.addEventListener("click", () => {
+  imageButtonRows.push(normalizeImageButtonRow({ scope: "pc", text: "", green: "", white: "", width: 319, height: 40 }));
+  renderImageButtonTable();
+});
+saveImageButtonsBtn.addEventListener("click", () => {
+  imageButtonRows = collectImageButtonRows();
+  persistImageButtonRows();
+  renderImageButtonTable();
+  renderCurrentNotification();
+});
+resetImageButtonsBtn.addEventListener("click", () => {
+  imageButtonRows = defaultImageButtonRows.map(normalizeImageButtonRow);
+  persistImageButtonRows();
+  renderImageButtonTable();
+  renderCurrentNotification();
+});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !guideModal.hidden) closeGuide();
+  if (event.key === "Escape" && !imageButtonsModal.hidden) closeImageButtons();
 });
 authForm.addEventListener("submit", (event) => {
   event.preventDefault();
