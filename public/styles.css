@@ -551,7 +551,8 @@ textarea {
 .image-buttons-table {
   width: 100%;
   min-width: 1040px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 
@@ -568,16 +569,15 @@ textarea {
   top: 0;
   z-index: 2;
   background: #fbfcfa;
+  box-shadow: 0 1px 0 var(--line);
   color: var(--muted);
   font-weight: 700;
 }
 
 .image-group-row td {
-  position: sticky;
-  top: 49px;
-  z-index: 1;
   padding: 9px 10px;
   background: #eef6f1;
+  border-top: 1px solid var(--line);
   color: #123c25;
   font-weight: 700;
 }
