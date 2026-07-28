@@ -510,7 +510,7 @@ textarea {
 
 .image-buttons-body {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 12px;
   min-height: 0;
   padding: 16px;
@@ -520,6 +520,47 @@ textarea {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.shared-image-tools {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(240px, 320px) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfa;
+}
+
+.shared-image-tools strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.shared-image-tools span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shared-image-tools span[data-tone="ok"] {
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+.shared-image-tools span[data-tone="error"] {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.shared-image-tools input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
 }
 
 .image-scope-tabs {
@@ -670,6 +711,10 @@ textarea {
 
   .pane-actions {
     justify-content: flex-start;
+  }
+
+  .shared-image-tools {
+    grid-template-columns: 1fr;
   }
 
   .key-tabs {
