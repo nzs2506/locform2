@@ -10,6 +10,7 @@ const outputs = {
   mobile: document.querySelector("#mobileOutput"),
   pc: document.querySelector("#pcOutput"),
   pcMb6r: document.querySelector("#pcMb6rOutput"),
+  pcMb3b: document.querySelector("#pcMb3bOutput"),
 };
 const keyTabs = document.querySelector("#keyTabs");
 const copyKeyBtn = document.querySelector("#copyKeyBtn");
@@ -34,66 +35,51 @@ let parsedNotifications = [];
 let activeNotificationIndex = 0;
 const accessPassword = "0558";
 const accessSessionKey = "locform-auth-ok";
-const imageButtonsStorageKey = "locform-redesign-image-buttons";
+const imageButtonsStorageKey = "locform-redesign-image-buttons-v2";
 
 const defaultImageButtonRows = [
-  {
-    scope: "pc",
-    text: "Получить бонус",
-    green: "https://image-gallery-s3-stable.mindbox.ru/621868E7732A68406F11F2AC6F040862F8F22939E6B949B4B0BD444E10D3C06C.png",
-    white: "",
-    width: 319,
-    height: 40,
-  },
-  {
-    scope: "pc",
-    text: "Подробнее",
-    green: "",
-    white: "https://image-gallery-s3-stable.mindbox.ru/C5E60D0EA93987129C85A8C86452DD1389745A2A3763DEC746496B5B51201F45.png",
-    width: 319,
-    height: 40,
-  },
-  {
-    scope: "pc",
-    text: "Внести депозит",
-    green: "https://image-gallery-s3-stable.mindbox.ru/F3D7656DC4D33E4DB51D96BD72260E6FA4857B15D0DCBEA615EA56753A482B84.png",
-    white: "",
-    width: 319,
-    height: 40,
-  },
-  {
-    scope: "mb6r",
-    text: "За страховкой",
-    green: "https://image-gallery-s3-stable.mindbox.ru/55B9273DBBF8576B47E312DCC97832B32040004CCB763326D19CDC18F8FF3123.png",
-    white: "https://image-gallery-s3-stable.mindbox.ru/9AF17BC503BAE0DEC955A13C3686925C1A920BA22F3D45F4F8D2488BA3198B6D.png",
-    width: 319,
-    height: 40,
-  },
-  {
-    scope: "mb6r",
-    text: "За фрибетом",
-    green: "https://image-gallery-s3-stable.mindbox.ru/57E0CA10B3DA23DC10665D556A1815BFCAF78D674499F8AC8F1FA1D2F3A6BCED.png",
-    white: "https://image-gallery-s3-stable.mindbox.ru/F27858984E73AC90311B07E4B51EE7805F90D34C216C7CAE0BEECBC9EDAB5726.png",
-    width: 319,
-    height: 40,
-  },
-  {
-    scope: "mb6r",
-    text: "Пополнить счёт",
-    green: "https://image-gallery-s3-stable.mindbox.ru/10D97D0D0632417294939F7A7DE032CEB4083997C4B61A1218FAB717DE20CF2A.png",
-    white: "https://image-gallery-s3-stable.mindbox.ru/4634C2BDABFF7B46BFFE508424615BBA250FFC7DDADECA559D2D053681D48DEB.png",
-    width: 319,
-    height: 40,
-  },
-  {
-    scope: "mb6r",
-    text: "Внести депозит",
-    green: "https://image-gallery-s3-stable.mindbox.ru/111846CFD90AE938CABD312C93AB092B85689705B88D33AB8D596F822D8CE226.png",
-    white: "https://image-gallery-s3-stable.mindbox.ru/35C0F1BED421F6E8D1F112347E4D850BC6C7C5311EF2D272274FA6C8158F4AF9.png",
-    width: 319,
-    height: 40,
-  },
-];
+  ["mb6r", "RUS", "\u0417\u0430 \u0441\u0442\u0440\u0430\u0445\u043e\u0432\u043a\u043e\u0439", "https://image-gallery-s3-stable.mindbox.ru/55B9273DBBF8576B47E312DCC97832B32040004CCB763326D19CDC18F8FF3123.png", "https://image-gallery-s3-stable.mindbox.ru/9AF17BC503BAE0DEC955A13C3686925C1A920BA22F3D45F4F8D2488BA3198B6D.png"],
+  ["mb6r", "RUS", "\u0417\u0430 \u0444\u0440\u0438\u0431\u0435\u0442\u043e\u043c", "https://image-gallery-s3-stable.mindbox.ru/57E0CA10B3DA23DC10665D556A1815BFCAF78D674499F8AC8F1FA1D2F3A6BCED.png", "https://image-gallery-s3-stable.mindbox.ru/F27858984E73AC90311B07E4B51EE7805F90D34C216C7CAE0BEECBC9EDAB5726.png"],
+  ["mb6r", "RUS", "\u041f\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0441\u0447\u0451\u0442", "https://image-gallery-s3-stable.mindbox.ru/10D97D0D0632417294939F7A7DE032CEB4083997C4B61A1218FAB717DE20CF2A.png", "https://image-gallery-s3-stable.mindbox.ru/4634C2BDABFF7B46BFFE508424615BBA250FFC7DDADECA559D2D053681D48DEB.png"],
+  ["mb6r", "RUS", "\u0412\u043d\u0435\u0441\u0442\u0438 \u0434\u0435\u043f\u043e\u0437\u0438\u0442", "https://image-gallery-s3-stable.mindbox.ru/111846CFD90AE938CABD312C93AB092B85689705B88D33AB8D596F822D8CE226.png", "https://image-gallery-s3-stable.mindbox.ru/35C0F1BED421F6E8D1F112347E4D850BC6C7C5311EF2D272274FA6C8158F4AF9.png"],
+  ["mb6r", "RUS", "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435", "https://image-gallery-s3-stable.mindbox.ru/E2CF9C4E2F2038A9BEBCC9B762EE18CE8CE331BC27029F3159FD1B0D92B67C1D.png", "https://image-gallery-s3-stable.mindbox.ru/0138530488066ED2C4EDF1167A27DE85DC2A8C7E3FF7AD3B6AB6150DB5087055.png"],
+  ["mb6r", "RUS", "\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u0431\u043e\u043d\u0443\u0441", "https://image-gallery-s3-stable.mindbox.ru/4972439F76F699D8B694B591F78AAE4284D265872EE0A8721003387453B27025.png", "https://image-gallery-s3-stable.mindbox.ru/4C1E91BC8F73CEEDBA1C000DD14249754E0668F374924C68B9F4C1509292FC67.png"],
+  ["mb6r", "RUS", "\u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u043b\u0438\u043d\u0438\u044e", "https://image-gallery-s3-stable.mindbox.ru/D64A01AEB1EB5F735FC6C57B030A7C8745C9B15128A5EF7026ADC6CC6632C9BE.png", "https://image-gallery-s3-stable.mindbox.ru/4DD66EC61955D27F5840332E6D08DC6F045C5CF1B0DC5F8DAA38174C54A7E652.png"],
+  ["mb3b", "RUS", "\u0417\u0430 \u0441\u0442\u0440\u0430\u0445\u043e\u0432\u043a\u043e\u0439", "https://image-gallery-s3-stable.mindbox.ru/55B9273DBBF8576B47E312DCC97832B32040004CCB763326D19CDC18F8FF3123.png", "https://image-gallery-s3-stable.mindbox.ru/9AF17BC503BAE0DEC955A13C3686925C1A920BA22F3D45F4F8D2488BA3198B6D.png"],
+  ["mb3b", "RUS", "\u0417\u0430 \u0444\u0440\u0438\u0431\u0435\u0442\u043e\u043c", "https://image-gallery-s3-stable.mindbox.ru/57E0CA10B3DA23DC10665D556A1815BFCAF78D674499F8AC8F1FA1D2F3A6BCED.png", "https://image-gallery-s3-stable.mindbox.ru/F27858984E73AC90311B07E4B51EE7805F90D34C216C7CAE0BEECBC9EDAB5726.png"],
+  ["mb3b", "RUS", "\u041f\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0441\u0447\u0451\u0442", "https://image-gallery-s3-stable.mindbox.ru/10D97D0D0632417294939F7A7DE032CEB4083997C4B61A1218FAB717DE20CF2A.png", "https://image-gallery-s3-stable.mindbox.ru/4634C2BDABFF7B46BFFE508424615BBA250FFC7DDADECA559D2D053681D48DEB.png"],
+  ["mb3b", "RUS", "\u0412\u043d\u0435\u0441\u0442\u0438 \u0434\u0435\u043f\u043e\u0437\u0438\u0442", "https://image-gallery-s3-stable.mindbox.ru/111846CFD90AE938CABD312C93AB092B85689705B88D33AB8D596F822D8CE226.png", "https://image-gallery-s3-stable.mindbox.ru/35C0F1BED421F6E8D1F112347E4D850BC6C7C5311EF2D272274FA6C8158F4AF9.png"],
+  ["mb3b", "RUS", "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435", "https://image-gallery-s3-stable.mindbox.ru/E2CF9C4E2F2038A9BEBCC9B762EE18CE8CE331BC27029F3159FD1B0D92B67C1D.png", "https://image-gallery-s3-stable.mindbox.ru/0138530488066ED2C4EDF1167A27DE85DC2A8C7E3FF7AD3B6AB6150DB5087055.png"],
+  ["mb3b", "RUS", "\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u0431\u043e\u043d\u0443\u0441", "https://image-gallery-s3-stable.mindbox.ru/4972439F76F699D8B694B591F78AAE4284D265872EE0A8721003387453B27025.png", "https://image-gallery-s3-stable.mindbox.ru/4C1E91BC8F73CEEDBA1C000DD14249754E0668F374924C68B9F4C1509292FC67.png"],
+  ["mb3b", "RUS", "\u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u043b\u0438\u043d\u0438\u044e", "https://image-gallery-s3-stable.mindbox.ru/D64A01AEB1EB5F735FC6C57B030A7C8745C9B15128A5EF7026ADC6CC6632C9BE.png", "https://image-gallery-s3-stable.mindbox.ru/4DD66EC61955D27F5840332E6D08DC6F045C5CF1B0DC5F8DAA38174C54A7E652.png"],
+  ["pc", "RUS", "\u0417\u0430 \u0441\u0442\u0440\u0430\u0445\u043e\u0432\u043a\u043e\u0439", "https://image-gallery-s3-stable.mindbox.ru/96B45BE69D153C90F1F8111CCD93AD10E2EC008D7654560F794DB4B339863057.png", "https://image-gallery-s3-stable.mindbox.ru/9834C794C2E5E8BDEF201B4DF4B5EF07F518D72ADE7F0CDDE12ED8F9DC2DDADD.png"],
+  ["pc", "RUS", "\u0417\u0430 \u0444\u0440\u0438\u0431\u0435\u0442\u043e\u043c", "https://image-gallery-s3-stable.mindbox.ru/F0DB590F99A575A0DEA04F2CC3E6115431B948930FCAC131A3329902DBEECEC9.png", "https://image-gallery-s3-stable.mindbox.ru/455C1C1AB9AAA493B3919EFC1222EE6CA4BD672C3D98962E0DC289D5EC88A69A.png"],
+  ["pc", "RUS", "\u041f\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0441\u0447\u0451\u0442", "https://image-gallery-s3-stable.mindbox.ru/78AA24567715B43DF344658FE6C8D9BAFB411143A326B20A8EF787FCF4FF7EC7.png", "https://image-gallery-s3-stable.mindbox.ru/D775FC3727517295FFC4E2601E2045B453DA02BA07679F9A1770006DEA3A168C.png"],
+  ["pc", "RUS", "\u0412\u043d\u0435\u0441\u0442\u0438 \u0434\u0435\u043f\u043e\u0437\u0438\u0442", "https://image-gallery-s3-stable.mindbox.ru/F3D7656DC4D33E4DB51D96BD72260E6FA4857B15D0DCBEA615EA56753A482B84.png", "https://image-gallery-s3-stable.mindbox.ru/7D907A1A00F1051256A16DB7C58D3445563C12C9C6A958595CC2E4D36CF5797A.png"],
+  ["pc", "RUS", "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435", "https://image-gallery-s3-stable.mindbox.ru/751C54ED4D7ABA5A1E33F23220584EE70B6CCCD3294DD200C4819F1B5797E6FB.png", "https://image-gallery-s3-stable.mindbox.ru/C5E60D0EA93987129C85A8C86452DD1389745A2A3763DEC746496B5B51201F45.png"],
+  ["pc", "RUS", "\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u0431\u043e\u043d\u0443\u0441", "https://image-gallery-s3-stable.mindbox.ru/621868E7732A68406F11F2AC6F040862F8F22939E6B949B4B0BD444E10D3C06C.png", "https://image-gallery-s3-stable.mindbox.ru/0EB40FC244E1A4216629759A046F0E40AB968AA03BEDA6ABF255B45958E7140E.png"],
+  ["pc", "RUS", "\u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u043b\u0438\u043d\u0438\u044e", "https://image-gallery-s3-stable.mindbox.ru/4DD66EC61955D27F5840332E6D08DC6F045C5CF1B0DC5F8DAA38174C54A7E652.png", "https://image-gallery-s3-stable.mindbox.ru/D64A01AEB1EB5F735FC6C57B030A7C8745C9B15128A5EF7026ADC6CC6632C9BE.png"],
+  ["pc", "ENG", "Insure Your Bet", "https://image-gallery-s3-stable.mindbox.ru/8DADCAD6107CEA55C3280ED596B76D5FC70970C28BAFEFB779DC957536BF99D4.png", "https://image-gallery-s3-stable.mindbox.ru/18640474A885D690BEE24CC6A6E532DF4A398588EBC9D5A0CD10EAC18C025361.png"],
+  ["pc", "ENG", "Claim Free Bet", "https://image-gallery-s3-stable.mindbox.ru/39ACEC6751602FA8D4C542E0E3E995210F7380B4A979DDFDBF1A9614E0594470.png", "https://image-gallery-s3-stable.mindbox.ru/266B62B2E8AD70D554C076FAEAFA82E7E93316D090F5D9EB71B019CD34FC5171.png"],
+  ["pc", "ENG", "Make A Deposit", "https://image-gallery-s3-stable.mindbox.ru/CB4731BADED5394A58F8761FCE9E1B3C28D78CF5CB2A5E8200B34E7884748268.png", "https://image-gallery-s3-stable.mindbox.ru/DF47B5F81E268DD98A343358B24D88C147C226AD7FBB2D2081150156EBF85943.png"],
+  ["pc", "ENG", "Deposit", "https://image-gallery-s3-stable.mindbox.ru/EEAEEB3F54C1CBD0730BA03D4FAD3E467D8FC076DC34D3A39A42B3C431FE1E84.png", "https://image-gallery-s3-stable.mindbox.ru/E98280C95F76F180BBB25CEA8F76DD41A35D6829E99880DFC66A26128E52F8CB.png"],
+  ["pc", "ENG", "More Info", "https://image-gallery-s3-stable.mindbox.ru/70BD33D78A891F38A133E203A34896FB7B5B9AF673EAD49101AACF7754D3BE7E.png", "https://image-gallery-s3-stable.mindbox.ru/1CDE47BC46AE06DCA5B2929C487898C507A76A0A8F79F7608572A0DCBADD1C0E.png"],
+  ["pc", "ENG", "Go To Sportsbook", "https://image-gallery-s3-stable.mindbox.ru/B27E01F65C8B6E3076672BF6473D12CEF8EEB9F5ADD7BC2B39385007D533B10F.png", "https://image-gallery-s3-stable.mindbox.ru/75728485861E4F71963A04A30E479CFFC74620612363B30BEFE85596354D21B4.png"],
+  ["pc", "ENG", "Claim Bonus", "https://image-gallery-s3-stable.mindbox.ru/50F5AC5AB9827EF1D90C0503EBE94D534AB04488A5050E56F7DE5349C242FC6F.png", "https://image-gallery-s3-stable.mindbox.ru/DF098FFE69D6F7EF0F67D499760DF5F9FEFF0C2806C741904FC23D542DA16FFF.png"],
+  ["pc", "UZB", "Stavkani sug'urtalash", "https://image-gallery-s3-stable.mindbox.ru/893A7D1DAE010E4A46BE6C9D37AEADD61FE86D007600F2E18CDC82B4FA25B2DD.png", "https://image-gallery-s3-stable.mindbox.ru/112033FEA94827EAC376D836AD00FF52E49626A5FA0AA44A15A5D43AFE0B3400.png"],
+  ["pc", "UZB", "Fribetni olish", "https://image-gallery-s3-stable.mindbox.ru/23E9BF2477FAC22CD7627CED3A8DF81B7D8F468E3120F38724AF76F43E95C0F1.png", "https://image-gallery-s3-stable.mindbox.ru/713F90E3334FF6AAF2709E2847BC9E78EF7B132422F1029005B115E884A9A174.png"],
+  ["pc", "UZB", "Depozit qo'yish", "https://image-gallery-s3-stable.mindbox.ru/FCDE01A4FFDEDD1AAB01A6C4EDCF21DFAA401D444FFB33B940D7B5E63E29BD25.png", "https://image-gallery-s3-stable.mindbox.ru/AB5FA5B68F50262DBC65D3C437585768CC2127D140FB55E51BC7734896B3FD3E.png"],
+  ["pc", "UZB", "Depositar", "https://image-gallery-s3-stable.mindbox.ru/BF1726BA25636A3C3AB0D8948446362D698CBA6D18A926C0FD32A542A699733A.png", "https://image-gallery-s3-stable.mindbox.ru/16AD6F37A4B332DD0F7E65A823B947DDDD133B5A3BCD1C98B5D25CAC3A83E58F.png"],
+  ["pc", "UZB", "Batafsil", "https://image-gallery-s3-stable.mindbox.ru/B7E680822BA4ECC897B7F704AB164E6EFD856A07F4309370C87FCD71228B037D.png", "https://image-gallery-s3-stable.mindbox.ru/4670AE6D3C60A8DB335241B3CECA9DDED115FDC7775D406FCA14447E55DAE09C.png"],
+  ["pc", "ES_LATAM", "Apuesta segura", "https://image-gallery-s3-stable.mindbox.ru/523C722B8BD1A85CE555C02F4C8E63C997A05879AE6864AFA8D71B450092494C.png", "https://image-gallery-s3-stable.mindbox.ru/A13E8E0CA39D89925482E840868C193CEDC25F1189816CFB4DE7F7C11210FE4B.png"],
+  ["pc", "ES_LATAM", "Apuesta Gratis", "https://image-gallery-s3-stable.mindbox.ru/87218C661AC3EBF682BA297D1242AAC96F77035CB70765E6CAF7B513B4AAF624.png", "https://image-gallery-s3-stable.mindbox.ru/84D27FF443F73F2395F228D12D4941A0D09B41C3D638B85E6D5FC121032509D9.png"],
+  ["pc", "ES_LATAM", "Hacer un dep\u00f3sito", "https://image-gallery-s3-stable.mindbox.ru/DEC9938F890768F622453BD7EBA9C92F3549173B0259BDC9EC4C4F422001F6D1.png", "https://image-gallery-s3-stable.mindbox.ru/F161AFC79CE488D308A0C5295C53B6CD11D29681E2C9FD19CE258F13741C57AE.png"],
+  ["pc", "ES_LATAM", "M\u00e1s informaci\u00f3n", "https://image-gallery-s3-stable.mindbox.ru/4EEBAF54C71CC1DF4C3E973592F601AE61CF7AE06962F4030264026B62A81833.png", "https://image-gallery-s3-stable.mindbox.ru/30EFF5A5B7277AB2B04BF93960C59C7DCBE71E600DA89A848C206CDAB1A43C06.png"],
+  ["pc", "AZ", "M\u0259rcl\u0259rinizi s\u0131\u011fortalay\u0131n", "https://image-gallery-s3-stable.mindbox.ru/556B66E145E44C44288F012E9AF7A2470576AE11F2F7ABA10DAF33145EBB4320.png", "https://image-gallery-s3-stable.mindbox.ru/CE042A868C647D98A662B41D18C4635C496B2CD7E0426BDF7FA1DB1BAF1E1735.png"],
+  ["pc", "AZ", "Fribet \u0259ld\u0259 edin", "https://image-gallery-s3-stable.mindbox.ru/1C2926C2FAD6FE590517014E34A31ABEFE1E3E9F4DD257D45CD16D72060FEB6B.png", "https://image-gallery-s3-stable.mindbox.ru/9CE153D7CA58BFABD2A47EBF2B7E928C012F24A6A7405DD034B91C9A68902B9B.png"],
+  ["pc", "AZ", "Depozit qoyun", "https://image-gallery-s3-stable.mindbox.ru/B0A0CD66FCD3BB64B11EE5F7D90EF0CDDF76BD7F25D2FBBF8983E354843F69BC.png", "https://image-gallery-s3-stable.mindbox.ru/714BB874421E26515ED490C1175310075970BDCD7DE608BACA66ECD3F4BDFB99.png"],
+  ["pc", "AZ", "\u018ftrafl\u0131 m\u0259lumat", "https://image-gallery-s3-stable.mindbox.ru/46ADAAA03ECF147E7D96193554B70B22601480406509ADF3E0D900359A92DF9D.png", "https://image-gallery-s3-stable.mindbox.ru/642E5CA04D3378994C08D9B50762BD52E1FF4D63C07243501A8EBBC6252F7253.png"],
+].map(([scope, language, text, green, white]) => ({ scope, language, text, green, white, width: 319, height: 40 }));
 let imageButtonRows = loadImageButtonRows();
 
 const stableNames = [
@@ -196,7 +182,8 @@ function imageButtonStorage() {
 
 function normalizeImageButtonRow(row) {
   return {
-    scope: /^(?:pc|mb6r|all)$/i.test(row?.scope || "") ? String(row.scope).toLowerCase() : "all",
+    scope: /^(?:pc|mb6r|mb3b|all)$/i.test(row?.scope || "") ? String(row.scope).toLowerCase() : "all",
+    language: normalizeImageButtonLanguage(row?.language || ""),
     text: String(row?.text || "").replace(/\s+/g, " ").trim(),
     green: cleanUrl(row?.green || ""),
     white: cleanUrl(row?.white || ""),
@@ -236,25 +223,42 @@ function imageButtonTextKey(value) {
     .toLowerCase();
 }
 
+function normalizeImageButtonLanguage(value) {
+  const compact = String(value || "").toUpperCase().replace(/[\s._-]+/g, "");
+  if (!compact || compact === "ALL" || compact === "ANY") return "";
+  if (compact === "RU" || compact === "RUS" || compact === "RUSSIA") return "RUS";
+  if (compact === "EN" || compact === "ENG") return "ENG";
+  if (compact === "UZ" || compact === "UZB") return "UZB";
+  if (compact === "AZ" || compact === "AZE") return "AZ";
+  if (["ARG", "LAT", "LATAM", "ES", "ESP", "SPA", "ESLATAM"].includes(compact)) return "ES_LATAM";
+  return compact;
+}
+
 function imageButtonScopeForVersion(version) {
   if (version === "pcMb6r") return "mb6r";
+  if (version === "pcMb3b") return "mb3b";
   if (version === "pc") return "pc";
   return "";
 }
 
-function imageButtonEntryFor(version, button, allowImageButtons = true) {
+function imageButtonEntryFor(version, button, allowImageButtons = true, language = "") {
   const scope = imageButtonScopeForVersion(version);
   if (!allowImageButtons || !scope) return null;
 
   const key = imageButtonTextKey(button.text);
+  const wantedLanguage = normalizeImageButtonLanguage(language);
   if (!key) return null;
 
   const candidates = imageButtonRows
     .filter((row) => imageButtonTextKey(row.text) === key)
     .filter((row) => row[button.color])
+    .filter((row) => row.scope === scope || row.scope === "all")
     .sort((a, b) => {
       const rank = (row) => (row.scope === scope ? 0 : row.scope === "all" ? 1 : 2);
-      return rank(a) - rank(b);
+      const languageRank = (row) => (
+        !wantedLanguage ? (row.language ? 1 : 0) : row.language === wantedLanguage ? 0 : row.language ? 2 : 1
+      );
+      return rank(a) - rank(b) || languageRank(a) - languageRank(b);
     });
 
   return candidates[0] || null;
@@ -262,7 +266,7 @@ function imageButtonEntryFor(version, button, allowImageButtons = true) {
 
 function buttonSegmentHasRedesignImage(version, segment, options = {}) {
   if (segment?.type !== "button") return false;
-  return segment.buttons.some((button) => imageButtonEntryFor(version, button, options.allowImageButtons !== false));
+  return segment.buttons.some((button) => imageButtonEntryFor(version, button, options.allowImageButtons !== false, options.language));
 }
 
 function findUrlMatches(value) {
@@ -1126,6 +1130,12 @@ function bodyForSite(text, target) {
   let scope = "";
   let scopedButtonCluster = false;
 
+  function nextMeaningfulIndex(start) {
+    let cursor = start;
+    while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
+    return cursor;
+  }
+
   for (let index = 0; index < lines.length;) {
     const line = lines[index];
     const prefixed = splitSitePrefixedButton(line);
@@ -1159,12 +1169,24 @@ function bodyForSite(text, target) {
       continue;
     }
 
+    if (scopedButtonCluster && isLineBreakInstruction(line)) {
+      const nextIndex = nextMeaningfulIndex(index + 1);
+      if (parseButtonBlockAt(lines, nextIndex) || siteMarker(lines[nextIndex] || "")) {
+        index += 1;
+        continue;
+      }
+
+      scope = "";
+      scopedButtonCluster = false;
+      out.push(line);
+      index += 1;
+      continue;
+    }
+
     const buttonBlock = parseButtonBlockAt(lines, index);
     if (buttonBlock) {
       if (scopedButtonCluster) {
         if (scope === target) out.push(buttonBlock.inline);
-        scope = "";
-        scopedButtonCluster = false;
         index = buttonBlock.nextIndex;
         continue;
       }
@@ -1785,6 +1807,7 @@ function makeButtonHtml(version, buttons, options = {}) {
   const compactSize = (button) => (visibleLength(button.text) > 20 ? "width: 180px; height: 35px;" : "width: 140px; height: 25px;");
   const redesignAccent = version === "pcMb6r" ? "#00B777" : "#01B462";
   const allowImageButtons = options.allowImageButtons !== false;
+  const imageButtonLanguage = options.language || "";
   const redesignTextAnchor = (button, index = 0) => {
     const isWhite = button.color === "white";
     const margin = index ? "\n\n  " : "";
@@ -1799,8 +1822,8 @@ function makeButtonHtml(version, buttons, options = {}) {
     return `<a href="${button.url}" target="_blank" style="display:block; width:${width}px; max-width:100%; margin:${margin}; padding:0; border:0; text-decoration:none;"><img src="${imageUrl}" width="${width}" height="${height}" alt="${safeAttr(button.text)}" style="display:block; width:${width}px; max-width:100%; height:${height}px; border:0; outline:none; text-decoration:none;"></a>`;
   };
 
-  if ((version === "pc" || version === "pcMb6r") && allowImageButtons) {
-    const imageEntries = buttons.map((button) => imageButtonEntryFor(version, button, allowImageButtons));
+  if ((version === "pc" || version === "pcMb6r" || version === "pcMb3b") && allowImageButtons) {
+    const imageEntries = buttons.map((button) => imageButtonEntryFor(version, button, allowImageButtons, imageButtonLanguage));
     if (imageEntries.some(Boolean)) {
       return buttons.map((button, index) => (
         imageEntries[index]
@@ -1887,6 +1910,7 @@ function renderSegments(version, segments, options = {}) {
     const previous = segments[index - 1];
 
     if (segment.type === "break") {
+      const isRedesignVersion = version === "pc" || version === "pcMb6r" || version === "pcMb3b";
       if (previous?.kind === "list") {
         const listBreak = version === "compact" ? "<br><br>\n" : "\n<br>\n";
         const lastRendered = String(rendered[rendered.length - 1] || "");
@@ -1897,7 +1921,14 @@ function renderSegments(version, segments, options = {}) {
         }
         continue;
       }
-      if ((version === "pc" || version === "pcMb6r") && next?.type === "button") {
+      if (isRedesignVersion && previous?.type === "button" && buttonSegmentHasRedesignImage(version, previous, options)) {
+        const breakHtml = next?.type === "line" && startsWithAgeWarning(next.html)
+          ? "\n\n<br><br>\n\n"
+          : "\n\n<br>\n\n";
+        if (!String(rendered[rendered.length - 1] || "").match(/<br>\s*$/)) rendered.push(breakHtml);
+        continue;
+      }
+      if (isRedesignVersion && next?.type === "button") {
         if (buttonSegmentHasRedesignImage(version, next, options) && !String(rendered[rendered.length - 1] || "").includes("<br><br>")) {
           rendered.push("\n\n<br><br>\n\n");
         }
@@ -1991,9 +2022,11 @@ function renderImageButtonTable() {
         <select data-image-field="scope" aria-label="Версия">
           <option value="pc"${row.scope === "pc" ? " selected" : ""}>PC</option>
           <option value="mb6r"${row.scope === "mb6r" ? " selected" : ""}>MB6R</option>
-          <option value="all"${row.scope === "all" ? " selected" : ""}>Оба</option>
+          <option value="mb3b"${row.scope === "mb3b" ? " selected" : ""}>MB3B</option>
+          <option value="all"${row.scope === "all" ? " selected" : ""}>Все</option>
         </select>
       </td>
+      <td><input data-image-field="language" type="text" value="${escapeAttribute(row.language || "")}" placeholder="RUS / ENG / UZB"></td>
       <td><input data-image-field="text" type="text" value="${escapeAttribute(row.text)}" placeholder="Текст кнопки"></td>
       <td><input data-image-field="green" type="url" value="${escapeAttribute(row.green)}" placeholder="URL зеленой картинки"></td>
       <td><input data-image-field="white" type="url" value="${escapeAttribute(row.white)}" placeholder="URL белой картинки"></td>
@@ -2012,6 +2045,7 @@ function collectImageButtonRows() {
       const value = (field) => row.querySelector(`[data-image-field="${field}"]`)?.value || "";
       return normalizeImageButtonRow({
         scope: value("scope"),
+        language: value("language"),
         text: value("text"),
         green: value("green"),
         white: value("white"),
@@ -2065,13 +2099,15 @@ function renderCurrentNotification() {
     ? normalizeRedesignSegments(redesignSegments)
     : normalizeRedesignSegments(oldSegments);
   const renderOptions = {
-    allowImageButtons: String(section.platform || "").toUpperCase() !== "MB3B",
+    allowImageButtons: true,
+    language: section.language,
   };
 
   outputs.compact.value = renderSegments("compact", oldSegments);
   outputs.mobile.value = renderSegments("mobile", oldSegments);
   outputs.pc.value = renderSegments("pc", redesignRenderSegments, renderOptions);
   outputs.pcMb6r.value = renderSegments("pcMb6r", redesignRenderSegments, renderOptions);
+  outputs.pcMb3b.value = renderSegments("pcMb3b", redesignRenderSegments, renderOptions);
 
   updatePreview();
 }
@@ -2238,7 +2274,7 @@ imageButtonRowsBody.addEventListener("click", (event) => {
   renderImageButtonTable();
 });
 addImageButtonRowBtn.addEventListener("click", () => {
-  imageButtonRows.push(normalizeImageButtonRow({ scope: "pc", text: "", green: "", white: "", width: 319, height: 40 }));
+  imageButtonRows.push(normalizeImageButtonRow({ scope: "pc", language: "", text: "", green: "", white: "", width: 319, height: 40 }));
   renderImageButtonTable();
 });
 saveImageButtonsBtn.addEventListener("click", () => {

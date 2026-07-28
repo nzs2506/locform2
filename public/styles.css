@@ -522,7 +522,7 @@ textarea {
 
 .image-buttons-table {
   width: 100%;
-  min-width: 1060px;
+  min-width: 1140px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -562,18 +562,23 @@ textarea {
 
 .image-buttons-table th:nth-child(2),
 .image-buttons-table td:nth-child(2) {
+  width: 100px;
+}
+
+.image-buttons-table th:nth-child(3),
+.image-buttons-table td:nth-child(3) {
   width: 180px;
 }
 
-.image-buttons-table th:nth-child(5),
-.image-buttons-table td:nth-child(5),
 .image-buttons-table th:nth-child(6),
-.image-buttons-table td:nth-child(6) {
+.image-buttons-table td:nth-child(6),
+.image-buttons-table th:nth-child(7),
+.image-buttons-table td:nth-child(7) {
   width: 78px;
 }
 
-.image-buttons-table th:nth-child(7),
-.image-buttons-table td:nth-child(7) {
+.image-buttons-table th:nth-child(8),
+.image-buttons-table td:nth-child(8) {
   width: 48px;
   text-align: center;
 }

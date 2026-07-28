@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.41</title>
+  <title>LOCform 3.8.42</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.41">
+  <link rel="stylesheet" href="styles.css?v=3.8.42">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,11 +27,11 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.41</h1>
+              <h1>LOCform 3.8.42</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
               <button id="imageButtonsBtn" class="image-buttons-button" type="button" aria-haspopup="dialog" aria-controls="imageButtonsModal" title="Картинки для redesign">Картинки</button>
             </div>
-            <span>Web, Mobile, Redesign, Redesign MB6R</span>
+            <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
           </div>
           <button id="convertBtn" type="button">Преобразовать</button>
         </div>
@@ -62,6 +62,7 @@
           <button class="tab" type="button" data-tab="mobile">Mobile</button>
           <button class="tab" type="button" data-tab="pc">Redesign</button>
           <button class="tab" type="button" data-tab="pcMb6r">Redesign MB6R</button>
+          <button class="tab" type="button" data-tab="pcMb3b">Redesign MB3B</button>
         </div>
 
         <section class="result active" data-panel="topic">
@@ -105,6 +106,14 @@
             <button type="button" data-copy="pcMb6r">Копировать</button>
           </div>
           <textarea id="pcMb6rOutput" spellcheck="false"></textarea>
+        </section>
+
+        <section class="result" data-panel="pcMb3b">
+          <div class="result-head">
+            <h2>Redesign MB3B</h2>
+            <button type="button" data-copy="pcMb3b">Копировать</button>
+          </div>
+          <textarea id="pcMb3bOutput" spellcheck="false"></textarea>
         </section>
       </div>
     </section>
@@ -197,12 +206,13 @@ Old version
         <button id="imageButtonsCloseBtn" class="guide-close" type="button" aria-label="Закрыть">×</button>
       </div>
       <div class="image-buttons-body">
-        <p>Если текст кнопки совпадает со строкой в таблице, в Redesign вместо текстовой кнопки будет вставлена картинка. Для MB3B картинки пока не применяются.</p>
+        <p>Если версия, язык, текст кнопки и цвет совпадают со строкой в таблице, в Redesign вместо текстовой кнопки будет вставлена картинка. Если строки нет, останется обычная текстовая кнопка.</p>
         <div class="image-buttons-table-wrap">
           <table class="image-buttons-table">
             <thead>
               <tr>
                 <th>Версия</th>
+                <th>Язык</th>
                 <th>Текст кнопки</th>
                 <th>Зеленая картинка</th>
                 <th>Белая картинка</th>
@@ -223,6 +233,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.41"></script>
+  <script src="app.js?v=3.8.42"></script>
 </body>
 </html>
