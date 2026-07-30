@@ -1552,6 +1552,19 @@ function bodyForSite(text, target) {
   let scope = "";
   let scopedButtonCluster = false;
 
+  function isSharedLandingButtonUrl(url) {
+    const raw = String(url || "").replace(/&amp;/g, "&").trim();
+    if (!raw || isImageGalleryUrl(raw)) return false;
+
+    try {
+      const parsed = new URL(raw, "https://locform.local");
+      const urlWeb = parsed.searchParams.get("url_web") || "";
+      return /^\/?lps\//iu.test(parsed.pathname.replace(/^\/+/, "")) || /^\/?lps\//iu.test(urlWeb);
+    } catch {
+      return /^\/?lps\//iu.test(raw);
+    }
+  }
+
   function nextMeaningfulIndex(start) {
     let cursor = start;
     while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
@@ -1608,7 +1621,10 @@ function bodyForSite(text, target) {
     const buttonBlock = parseButtonBlockAt(lines, index);
     if (buttonBlock) {
       if (scopedButtonCluster) {
-        if (scope === target) out.push(buttonBlock.inline);
+        if (
+          scope === target ||
+          (buttonColorFromMarker(buttonBlock.marker) === "white" && isSharedLandingButtonUrl(buttonBlock.url))
+        ) out.push(buttonBlock.inline);
         index = buttonBlock.nextIndex;
         continue;
       }
