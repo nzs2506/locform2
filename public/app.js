@@ -204,6 +204,15 @@ function isImageGalleryUrl(url) {
   return /^https:\/\/image-gallery-s3(?:-[a-z0-9-]+)?\.mindbox\.ru\//iu.test(cleanImageButtonAssetUrl(url));
 }
 
+function spacedImageGalleryUrlMatches(value) {
+  const text = stripTagsWithSpaces(value).replace(/&amp;/g, "&");
+  const pattern = /https?\s*:\s*\/\s*\/\s*image\s*-\s*gallery\s*-\s*s\s*3(?:\s*-\s*[a-z0-9]+)*\s*\.\s*mindbox\s*\.\s*ru\s*\/[a-z0-9\s.-]+?p\s*n\s*g/giu;
+
+  return [...text.matchAll(pattern)]
+    .map((match) => ({ raw: match[0], url: cleanImageButtonAssetUrl(match[0]) }))
+    .filter((match) => isImageGalleryUrl(match.url));
+}
+
 function imageButtonStorage() {
   try {
     return typeof localStorage === "undefined" ? null : localStorage;
@@ -825,8 +834,9 @@ function imageGalleryUrlsFromLine(line) {
   const visibleUrls = findUrlMatches(stripTagsWithSpaces(line))
     .map((match) => match.url)
     .filter(isImageGalleryUrl);
+  const spacedUrls = spacedImageGalleryUrlMatches(line).map((match) => match.url);
 
-  return [...htmlUrls, ...visibleUrls].filter((url, index, urls) => urls.indexOf(url) === index);
+  return [...htmlUrls, ...visibleUrls, ...spacedUrls].filter((url, index, urls) => urls.indexOf(url) === index);
 }
 
 function stripImageGalleryUrlsFromText(value) {
@@ -835,6 +845,9 @@ function stripImageGalleryUrlsFromText(value) {
     text = text
       .replace(new RegExp(`\\s*\\(?\\s*${escapeRegExp(url)}\\s*\\)?\\s*`, "gu"), " ")
       .replace(new RegExp(`\\s*\\(?\\s*${escapeRegExp(url.replace(/&/g, "&amp;"))}\\s*\\)?\\s*`, "gu"), " ");
+  });
+  spacedImageGalleryUrlMatches(value).forEach(({ raw }) => {
+    text = text.replace(new RegExp(`\\s*\\(?\\s*${escapeRegExp(raw)}\\s*\\)?\\s*`, "gu"), " ");
   });
 
   return text
