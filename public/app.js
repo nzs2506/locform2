@@ -1293,6 +1293,23 @@ function applyNbsp(value, includeDynamic = true) {
     .replace(/вас —/g, "вас&nbsp;—");
 }
 
+function applyNamedNbsp(value, includeDynamic = true) {
+  let html = value;
+  const names = includeDynamic ? [...stableNames, ...dynamicStableNames] : stableNames;
+
+  for (const name of names) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapedHtml = escaped.replace(" & ", " &amp; ");
+    const replacement = name.replace(/ & /g, "&nbsp;&amp;&nbsp;").replace(/ /g, "&nbsp;");
+    html = html.replace(new RegExp(escaped, "g"), replacement);
+    html = html.replace(new RegExp(escapedHtml, "g"), replacement);
+  }
+
+  return html
+    .replace(/На кону —/g, "На&nbsp;кону&nbsp;—")
+    .replace(/вас —/g, "вас&nbsp;—");
+}
+
 function normalizeBold(value) {
   return value
     .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
@@ -2437,7 +2454,7 @@ function renderTopicOutput(topic) {
   const plainTopic = String(topic || "").trim();
   if (!plainTopic) return "";
 
-  const redesignTopic = applyNbsp(escapeHtml(plainTopic));
+  const redesignTopic = applyNamedNbsp(escapeHtml(plainTopic));
   if (redesignTopic === escapeHtml(plainTopic)) return plainTopic;
 
   return `${plainTopic}\n\nredesign\n${redesignTopic}`;
