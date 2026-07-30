@@ -1293,9 +1293,20 @@ function applyNbsp(value, includeDynamic = true) {
     .replace(/вас —/g, "вас&nbsp;—");
 }
 
+function isTopicDynamicNbspName(name) {
+  const normalized = String(name || "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return false;
+  if (/^(?:\d|[$€₽])/u.test(normalized)) return false;
+  if (/^(?:и|в|во|на|от|до|за|для|с|со|по|к|ко)\s+/iu.test(normalized)) return false;
+
+  const words = normalized.match(/[A-Za-zА-Яа-яЁё]+/gu) || [];
+  const meaningfulWords = words.filter((word) => !/^(?:BYN|UZS|USD|EUR|RUB|AR|US)$/u.test(word));
+  return meaningfulWords.length >= 2 && meaningfulWords.some((word) => /^[A-ZА-ЯЁ]/u.test(word));
+}
+
 function applyNamedNbsp(value, includeDynamic = true) {
   let html = value;
-  const names = includeDynamic ? [...stableNames, ...dynamicStableNames] : stableNames;
+  const names = includeDynamic ? [...stableNames, ...dynamicStableNames.filter(isTopicDynamicNbspName)] : stableNames;
 
   for (const name of names) {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
