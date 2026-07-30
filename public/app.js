@@ -68,7 +68,7 @@ const defaultImageButtonRows = [
   ["pc", "RUS", "\u0412\u043d\u0435\u0441\u0442\u0438 \u0434\u0435\u043f\u043e\u0437\u0438\u0442", "https://image-gallery-s3-stable.mindbox.ru/F3D7656DC4D33E4DB51D96BD72260E6FA4857B15D0DCBEA615EA56753A482B84.png", "https://image-gallery-s3-stable.mindbox.ru/7D907A1A00F1051256A16DB7C58D3445563C12C9C6A958595CC2E4D36CF5797A.png"],
   ["pc", "RUS", "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435", "https://image-gallery-s3-stable.mindbox.ru/751C54ED4D7ABA5A1E33F23220584EE70B6CCCD3294DD200C4819F1B5797E6FB.png", "https://image-gallery-s3-stable.mindbox.ru/C5E60D0EA93987129C85A8C86452DD1389745A2A3763DEC746496B5B51201F45.png"],
   ["pc", "RUS", "\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u0431\u043e\u043d\u0443\u0441", "https://image-gallery-s3-stable.mindbox.ru/621868E7732A68406F11F2AC6F040862F8F22939E6B949B4B0BD444E10D3C06C.png", "https://image-gallery-s3-stable.mindbox.ru/0EB40FC244E1A4216629759A046F0E40AB968AA03BEDA6ABF255B45958E7140E.png"],
-  ["pc", "RUS", "\u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u043b\u0438\u043d\u0438\u044e", "https://image-gallery-s3-stable.mindbox.ru/4DD66EC61955D27F5840332E6D08DC6F045C5CF1B0DC5F8DAA38174C54A7E652.png", "https://image-gallery-s3-stable.mindbox.ru/D64A01AEB1EB5F735FC6C57B030A7C8745C9B15128A5EF7026ADC6CC6632C9BE.png"],
+  ["pc", "RUS", "\u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u043b\u0438\u043d\u0438\u044e", "https://image-gallery-s3-stable.mindbox.ru/D64A01AEB1EB5F735FC6C57B030A7C8745C9B15128A5EF7026ADC6CC6632C9BE.png", "https://image-gallery-s3-stable.mindbox.ru/4DD66EC61955D27F5840332E6D08DC6F045C5CF1B0DC5F8DAA38174C54A7E652.png"],
   ["pc", "ENG", "Insure Your Bet", "https://image-gallery-s3-stable.mindbox.ru/8DADCAD6107CEA55C3280ED596B76D5FC70970C28BAFEFB779DC957536BF99D4.png", "https://image-gallery-s3-stable.mindbox.ru/18640474A885D690BEE24CC6A6E532DF4A398588EBC9D5A0CD10EAC18C025361.png"],
   ["pc", "ENG", "Claim Free Bet", "https://image-gallery-s3-stable.mindbox.ru/39ACEC6751602FA8D4C542E0E3E995210F7380B4A979DDFDBF1A9614E0594470.png", "https://image-gallery-s3-stable.mindbox.ru/266B62B2E8AD70D554C076FAEAFA82E7E93316D090F5D9EB71B019CD34FC5171.png"],
   ["pc", "ENG", "Make A Deposit", "https://image-gallery-s3-stable.mindbox.ru/CB4731BADED5394A58F8761FCE9E1B3C28D78CF5CB2A5E8200B34E7884748268.png", "https://image-gallery-s3-stable.mindbox.ru/DF47B5F81E268DD98A343358B24D88C147C226AD7FBB2D2081150156EBF85943.png"],
@@ -178,12 +178,30 @@ function cleanUrl(raw) {
     .replace(/\s+/g, "");
 }
 
+function cleanButtonUrlCandidate(raw) {
+  const compact = String(raw || "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .trim()
+    .replace(/^\(+/, "")
+    .replace(/\)+$/, "")
+    .replace(/\b(https?)\s*:\s*\/\s*\/\s*/iu, "$1://");
+  const url = cleanUrl(compact);
+  return /^(?:https?:\/\/|\/)\S+$/iu.test(url) ? url : "";
+}
+
+function cleanImageButtonAssetUrl(raw) {
+  const url = cleanUrl(raw);
+  const image = url.match(/^https:\/\/image-gallery-s3(?:-[a-z0-9-]+)?\.mindbox\.ru\/[^?#\s]+?\.png/iu);
+  return image ? image[0] : url;
+}
+
 function cleanMatchedUrl(raw) {
   return cleanUrl(String(raw || "").replace(/\)+$/g, ""));
 }
 
 function isImageGalleryUrl(url) {
-  return /^https:\/\/image-gallery-s3(?:-[a-z0-9-]+)?\.mindbox\.ru\//iu.test(cleanUrl(url));
+  return /^https:\/\/image-gallery-s3(?:-[a-z0-9-]+)?\.mindbox\.ru\//iu.test(cleanImageButtonAssetUrl(url));
 }
 
 function imageButtonStorage() {
@@ -200,8 +218,8 @@ function normalizeImageButtonRow(row) {
     language: normalizeImageButtonLanguage(row?.language || ""),
     text: stripImageGalleryUrlsFromText(row?.text || ""),
     group: String(row?.group || "").replace(/\s+/g, " ").trim(),
-    green: cleanUrl(row?.green || ""),
-    white: cleanUrl(row?.white || ""),
+    green: cleanImageButtonAssetUrl(row?.green || ""),
+    white: cleanImageButtonAssetUrl(row?.white || ""),
     width: Math.max(1, Number.parseInt(row?.width, 10) || 319),
     height: Math.max(1, Number.parseInt(row?.height, 10) || 40),
   };
@@ -401,8 +419,8 @@ function mergeImageButtonRowsPreservingGroups(...rowSets) {
       ...previous,
       ...normalized,
       group: previous.group || normalized.group,
-      green: normalized.green || previous.green,
-      white: normalized.white || previous.white,
+      green: previous.green || normalized.green,
+      white: previous.white || normalized.white,
     } : normalized);
   });
   return [...rowsByKey.values()];
@@ -627,7 +645,9 @@ function normalizeInputText(value) {
     .replace(new RegExp(`((?:https?:\\/\\/|\\/)[^\\n\\s]+?)(?=${buttonWords}\\s*:?)`, "giu"), "$1\n")
     .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s*кнопка|Белая\\s*кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
-    .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords}|${buttonWords}\\s*:?|message\\.service|18\\+)([?&=/#\\w-])`, "giu"), "$1$2");
+    .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords}|${buttonWords}\\s*:?|message\\.service|18\\+)([?&=/#\\w-])`, "giu"), (match, url, next) => (
+      isImageGalleryUrl(url) ? `${url}\n${next}` : `${url}${next}`
+    ));
 }
 
 function siteMarker(line) {
@@ -708,17 +728,15 @@ function parseButtonBlockAt(lines, index) {
   if (!labelText) {
     while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
     const candidate = stripImageGalleryUrlsFromText(lines[cursor] || "");
-    if (!candidate || /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(candidate) || siteMarker(candidate) || splitSitePrefix(candidate)) return null;
+    if (!candidate || cleanButtonUrlCandidate(candidate) || siteMarker(candidate) || splitSitePrefix(candidate)) return null;
     labelText = candidate;
     cursor += 1;
   }
 
   while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
-  const urlCandidate = stripTags(lines[cursor] || "");
-  const urlMatch = urlCandidate.match(/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu);
-  if (!urlMatch) return null;
+  const url = cleanButtonUrlCandidate(lines[cursor] || "");
+  if (!url) return null;
 
-  const url = cleanUrl(urlMatch[1]);
   return {
     marker: markerLabel,
     text: labelText,
@@ -739,7 +757,9 @@ function splitSitePrefixLoose(line) {
 }
 
 function matchedUrls(value) {
-  return findUrlMatches(value).map((match) => match.url);
+  const direct = cleanButtonUrlCandidate(value);
+  const urls = findUrlMatches(value).map((match) => match.url);
+  return direct ? [direct, ...urls.filter((url) => url !== direct)] : urls;
 }
 
 function parseButtonScopedUrlsAt(lines, index) {
@@ -928,7 +948,7 @@ function normalizeButtonBlocks(value) {
   function pushExpandedButton(label, text, url) {
     out.push(`${label}:`);
     out.push(stripImageGalleryUrlsFromText(text));
-    out.push(`(${cleanUrl(url)})`);
+    out.push(`(${cleanButtonUrlCandidate(url) || cleanUrl(url)})`);
   }
 
   function parseEmbeddedSiteUrlLine(value) {
@@ -980,17 +1000,16 @@ function normalizeButtonBlocks(value) {
       return { text: cleanRest.slice(0, urlMatch.index).trim(), url: urlMatch.url, consumedNext: false };
     }
 
-    const url = stripTags(nextLine || "");
-    if (cleanRest && /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url) && !isImageGalleryUrl(url)) {
-      return { text: cleanRest, url: cleanUrl(url), consumedNext: true };
+    const url = cleanButtonUrlCandidate(nextLine || "");
+    if (cleanRest && url && !isImageGalleryUrl(url)) {
+      return { text: cleanRest, url, consumedNext: true };
     }
 
     return null;
   }
 
   function urlOnlyLine(value) {
-    const match = stripTags(value || "").match(/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu);
-    const url = match ? cleanMatchedUrl(match[1]) : "";
+    const url = cleanButtonUrlCandidate(value);
     return isImageGalleryUrl(url) ? "" : url;
   }
 

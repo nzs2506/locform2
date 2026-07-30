@@ -56,14 +56,20 @@ function cleanUrl(value) {
     .replace(/\s+/g, "");
 }
 
+function cleanImageButtonAssetUrl(value) {
+  const url = cleanUrl(value);
+  const image = url.match(/^https:\/\/image-gallery-s3(?:-[a-z0-9-]+)?\.mindbox\.ru\/[^?#\s]+?\.png/i);
+  return image ? image[0] : url;
+}
+
 function normalizeRow(row) {
   return {
     scope: /^(?:pc|mb6r|mb3b|all)$/i.test(row?.scope || "") ? String(row.scope).toLowerCase() : "all",
     language: normalizeLanguage(row?.language),
     text: compactText(row?.text),
     group: compactText(row?.group),
-    green: cleanUrl(row?.green),
-    white: cleanUrl(row?.white),
+    green: cleanImageButtonAssetUrl(row?.green),
+    white: cleanImageButtonAssetUrl(row?.white),
     width: Math.max(1, Number.parseInt(row?.width, 10) || 319),
     height: Math.max(1, Number.parseInt(row?.height, 10) || 40),
   };
