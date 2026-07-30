@@ -2250,7 +2250,7 @@ function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
   text = applyDocxHighlightButtonHints(text, highlightHints);
   text = separateLanguageHeaders(text);
 
-  return normalizeButtonBlocks(text);
+  return normalizeInputText(text).trim();
 }
 
 function makeButtonHtml(version, buttons, options = {}) {
