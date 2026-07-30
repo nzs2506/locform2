@@ -702,12 +702,12 @@ function parseButtonBlockAt(lines, index) {
   if (!marker) return null;
 
   const markerLabel = marker[1];
-  let labelText = marker[2].trim();
+  let labelText = stripImageGalleryUrlsFromText(marker[2]);
   let cursor = index + 1;
 
   if (!labelText) {
     while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
-    const candidate = stripTags(lines[cursor] || "");
+    const candidate = stripImageGalleryUrlsFromText(lines[cursor] || "");
     if (!candidate || /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(candidate) || siteMarker(candidate) || splitSitePrefix(candidate)) return null;
     labelText = candidate;
     cursor += 1;
@@ -747,7 +747,7 @@ function parseButtonScopedUrlsAt(lines, index) {
   if (!marker) return null;
 
   const markerLabel = marker[1];
-  const buttonText = marker[2].trim();
+  const buttonText = stripImageGalleryUrlsFromText(marker[2]);
   if (!buttonText) return null;
 
   const variants = [];
@@ -841,7 +841,8 @@ function prepareImageGalleryButtonRows(text) {
     return positionGroups[positionKey];
   }
 
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     const nextLanguage = languageHeader(line);
     if (nextLanguage) language = normalizeImageButtonLanguage(nextLanguage) || nextLanguage;
 
@@ -855,7 +856,11 @@ function prepareImageGalleryButtonRows(text) {
 
     const marker = matchButtonMarker(line);
     const imageUrl = imageGalleryUrlsFromLine(line)[0] || "";
-    if (!marker || !imageUrl) {
+    const nextLine = lines[index + 1] || "";
+    const nextLineImageUrl = marker && !imageUrl ? (imageGalleryUrlsFromLine(nextLine)[0] || "") : "";
+    const effectiveImageUrl = imageUrl || nextLineImageUrl;
+
+    if (!marker || !effectiveImageUrl) {
       const plain = stripTagsWithSpaces(line);
       if (
         plain &&
@@ -873,7 +878,7 @@ function prepareImageGalleryButtonRows(text) {
     }
 
     const markerLabel = marker[1];
-    const buttonText = stripImageGalleryUrlsFromText(marker[2]);
+    const buttonText = stripImageGalleryUrlsFromText(marker[2] || nextLine);
     if (!buttonText) {
       output.push(line);
       continue;
@@ -888,14 +893,18 @@ function prepareImageGalleryButtonRows(text) {
       language: rowLanguage,
       text: buttonText,
       group: positionKey ? groupForPosition(positionKey, buttonText) : knownImageButtonGroupLabel(buttonText),
-      green: color === "green" ? imageUrl : "",
-      white: color === "white" ? imageUrl : "",
+      green: color === "green" ? effectiveImageUrl : "",
+      white: color === "white" ? effectiveImageUrl : "",
       width: 319,
       height: 40,
     };
 
     detectedRows.push(row);
-    output.push(`${markerLabel}: ${buttonText}`);
+    output.push(marker[2] ? `${markerLabel}: ${buttonText}` : `${markerLabel}:`);
+    if (nextLineImageUrl) {
+      if (!marker[2]) output.push(buttonText);
+      index += 1;
+    }
   }
 
   registerDetectedImageButtonRows(detectedRows);
@@ -913,7 +922,7 @@ function normalizeButtonBlocks(value) {
 
   function pushExpandedButton(label, text, url) {
     out.push(`${label}:`);
-    out.push(text);
+    out.push(stripImageGalleryUrlsFromText(text));
     out.push(`(${cleanUrl(url)})`);
   }
 
@@ -950,7 +959,7 @@ function normalizeButtonBlocks(value) {
   }
 
   function buildButtonLine(label, rest, nextLine) {
-    const cleanRest = stripTags(rest);
+    const cleanRest = stripImageGalleryUrlsFromText(rest);
     const inlineUrl = cleanRest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[\s\S]+?)\)?\s*$/iu);
     if (inlineUrl && !isImageGalleryUrl(inlineUrl[2])) {
       return { text: inlineUrl[1].trim(), url: cleanUrl(inlineUrl[2]), consumedNext: false };
@@ -1072,15 +1081,15 @@ function normalizeButtonBlocks(value) {
 
       if (labelLine && site?.marker === "redesign" && urls.length >= 2) {
         out.push("redesign");
-        pushExpandedButton(plain, labelLine, urls[0]);
+        pushExpandedButton(plain, stripImageGalleryUrlsFromText(labelLine), urls[0]);
         out.push("Old version");
-        pushExpandedButton(plain, labelLine, urls[1]);
+        pushExpandedButton(plain, stripImageGalleryUrlsFromText(labelLine), urls[1]);
         index += 4;
         continue;
       }
 
       if (labelLine) {
-        const consumed = pushLabeledSiteButtons(plain, labelLine, index + 2);
+        const consumed = pushLabeledSiteButtons(plain, stripImageGalleryUrlsFromText(labelLine), index + 2);
         if (consumed !== null) {
           index = consumed;
           continue;
@@ -1096,7 +1105,7 @@ function normalizeButtonBlocks(value) {
     }
 
     const label = marker[1];
-    let rest = marker[2].trim();
+    let rest = stripImageGalleryUrlsFromText(marker[2]);
     let next = index + 1;
     let consumedSiteButtons = false;
     let inheritedSiteButtonText = "";
@@ -1152,7 +1161,7 @@ function normalizeButtonBlocks(value) {
         continue;
       }
 
-      const labelText = stripTags(lines[next]);
+      const labelText = stripImageGalleryUrlsFromText(lines[next]);
       if (labelText && !splitSitePrefix(lines[next])) {
         const consumed = pushLabeledSiteButtons(label, labelText, next + 1);
         if (consumed !== null) {
@@ -1207,7 +1216,7 @@ function normalizeButtonBlocks(value) {
     if (rest && next < lines.length) {
       const url = stripTags(lines[next]);
       if (/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url) && !isImageGalleryUrl(url)) {
-        out.push(`${label}: ${rest} (${cleanUrl(url)})`);
+        out.push(`${label}: ${stripImageGalleryUrlsFromText(rest)} (${cleanUrl(url)})`);
         index = next + 1;
         continue;
       }
