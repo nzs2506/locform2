@@ -45,6 +45,7 @@ const imageButtonsStorageKey = "locform-redesign-image-buttons-v2";
 const sharedImageButtonsUrl = "https://locform-images.nzs2593.workers.dev/image-buttons";
 const bundledSharedImageButtonsUrl = "image-buttons.shared.json";
 const sharedImageButtonsTokenKey = "locform-image-buttons-password";
+let sharedImageButtonsAutosaveTimer = 0;
 
 const defaultImageButtonRows = [
   ["mb6r", "RUS", "\u0417\u0430 \u0441\u0442\u0440\u0430\u0445\u043e\u0432\u043a\u043e\u0439", "https://image-gallery-s3-stable.mindbox.ru/55B9273DBBF8576B47E312DCC97832B32040004CCB763326D19CDC18F8FF3123.png", "https://image-gallery-s3-stable.mindbox.ru/9AF17BC503BAE0DEC955A13C3686925C1A920BA22F3D45F4F8D2488BA3198B6D.png"],
@@ -181,6 +182,10 @@ function cleanMatchedUrl(raw) {
   return cleanUrl(String(raw || "").replace(/\)+$/g, ""));
 }
 
+function isImageGalleryUrl(url) {
+  return /^https:\/\/image-gallery-s3(?:-[a-z0-9-]+)?\.mindbox\.ru\//iu.test(cleanUrl(url));
+}
+
 function imageButtonStorage() {
   try {
     return typeof localStorage === "undefined" ? null : localStorage;
@@ -309,22 +314,25 @@ async function loadSharedImageButtons(options = {}) {
   }
 }
 
-async function saveSharedImageButtons() {
+async function saveSharedImageButtons(options = {}) {
   if (!window.fetch) return;
+  const isAuto = options.auto === true;
 
-  syncVisibleImageButtonRows({ prune: true });
+  if (!isAuto) syncVisibleImageButtonRows({ prune: true });
   persistImageButtonRows();
 
   const token = sharedImageButtonsTokenValue();
   if (!token) {
-    setSharedImageButtonsStatus("Для записи в общий спейс нужен пароль.", "error");
-    sharedImageButtonsToken?.focus();
+    if (!isAuto) {
+      setSharedImageButtonsStatus("Для записи в общий спейс нужен пароль.", "error");
+      sharedImageButtonsToken?.focus();
+    }
     return;
   }
 
   rememberSharedImageButtonsToken();
   saveSharedImageButtonsBtn.disabled = true;
-  setSharedImageButtonsStatus("Сохраняю общий список в Cloudflare...");
+  setSharedImageButtonsStatus(isAuto ? "Новые картинки найдены, сохраняю в общий спейс..." : "Сохраняю общий список в Cloudflare...");
 
   try {
     const rows = imageButtonRowsForJson();
@@ -345,7 +353,7 @@ async function saveSharedImageButtons() {
     const savedRows = Array.isArray(payload.rows) ? payload.rows : rows;
     imageButtonRows = mergeImageButtonRows(defaultImageButtonRows, imageButtonRows, savedRows);
     persistImageButtonRows();
-    setSharedImageButtonsStatus(`Сохранено в общий спейс: ${payload.count || savedRows.length} строк.`, "ok");
+    setSharedImageButtonsStatus(`${isAuto ? "Новые картинки сохранены" : "Сохранено"} в общий спейс: ${payload.count || savedRows.length} строк.`, "ok");
     renderImageButtonTable();
     renderCurrentNotification();
   } catch (error) {
@@ -381,6 +389,53 @@ function mergeImageButtonRows(...rowSets) {
   return [...rowsByKey.values()];
 }
 
+function mergeImageButtonRowsPreservingGroups(...rowSets) {
+  const rowsByKey = new Map();
+  rowSets.flat().forEach((row) => {
+    const normalized = normalizeImageButtonRow(row);
+    if (!normalized.text || (!normalized.green && !normalized.white)) return;
+
+    const key = imageButtonRowKey(normalized);
+    const previous = rowsByKey.get(key);
+    rowsByKey.set(key, previous ? {
+      ...previous,
+      ...normalized,
+      group: previous.group || normalized.group,
+      green: normalized.green || previous.green,
+      white: normalized.white || previous.white,
+    } : normalized);
+  });
+  return [...rowsByKey.values()];
+}
+
+function imageButtonRowsChanged(previousRows, nextRows) {
+  const previous = new Map(previousRows.map((row) => [imageButtonRowKey(normalizeImageButtonRow(row)), JSON.stringify(normalizeImageButtonRow(row))]));
+  if (previous.size !== nextRows.length) return true;
+
+  return nextRows.some((row) => previous.get(imageButtonRowKey(row)) !== JSON.stringify(normalizeImageButtonRow(row)));
+}
+
+function scheduleSharedImageButtonsAutosave() {
+  if (sharedImageButtonsAutosaveTimer) clearTimeout(sharedImageButtonsAutosaveTimer);
+  sharedImageButtonsAutosaveTimer = setTimeout(() => {
+    sharedImageButtonsAutosaveTimer = 0;
+    saveSharedImageButtons({ auto: true });
+  }, 800);
+}
+
+function registerDetectedImageButtonRows(rows) {
+  const detectedRows = rows.map(normalizeImageButtonRow).filter((row) => row.text && (row.green || row.white));
+  if (!detectedRows.length) return;
+
+  const previousRows = imageButtonRows.slice();
+  imageButtonRows = mergeImageButtonRowsPreservingGroups(imageButtonRows, detectedRows);
+  if (!imageButtonRowsChanged(previousRows, imageButtonRows)) return;
+
+  persistImageButtonRows();
+  renderImageButtonTable();
+  scheduleSharedImageButtonsAutosave();
+}
+
 function normalizeImageButtonLanguage(value) {
   const compact = String(value || "").toUpperCase().replace(/[\s._-]+/g, "");
   if (!compact || compact === "ALL" || compact === "ANY") return "";
@@ -388,7 +443,7 @@ function normalizeImageButtonLanguage(value) {
   if (compact === "EN" || compact === "ENG") return "ENG";
   if (compact === "UZ" || compact === "UZB") return "UZB";
   if (compact === "AZ" || compact === "AZE") return "AZ";
-  if (["ARG", "LAT", "LATAM", "ES", "ESP", "SPA", "ESLATAM"].includes(compact)) return "ES_LATAM";
+  if (["AR", "ARG", "LAT", "LATAM", "ES", "ESP", "SPA", "ESLATAM"].includes(compact)) return "ES_LATAM";
   return compact;
 }
 
@@ -536,6 +591,10 @@ function findUrlMatches(value) {
   return matches;
 }
 
+function matchedActionUrls(value) {
+  return matchedUrls(value).filter((url) => !isImageGalleryUrl(url));
+}
+
 function stripTags(value) {
   return String(value || "").replace(/<[^>]+>/g, "").trim();
 }
@@ -558,7 +617,7 @@ function plainOutputText(value) {
 
 function normalizeInputText(value) {
   const siteWords = "(?:old\\s*site|oldsite|old\\s*version|oldversion|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
-  const buttonWords = "(?:Кнопка\\s*зел[её]ная|Зел[её]ная\\s+кнопка|Button\\s*green|Green\\s*button|Кнопка\\s*белая|Белая\\s+кнопка|Button\\s*white|White\\s*button)";
+  const buttonWords = "(?:Кнопка\\s*зел[её]ная|Зел[её]ная\\s*кнопка|Button\\s*green|Green\\s*button|Кнопка\\s*белая|Белая\\s*кнопка|Button\\s*white|White\\s*button)";
   return String(value || "")
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
@@ -566,7 +625,7 @@ function normalizeInputText(value) {
     .replace(/(^|\n)\s*(?:<\/[bi]>\s*)+/gi, "$1")
     .replace(new RegExp(`([^\\n])\\s*((?:<[^>]+>\\s*)*${buttonWords}(?:\\s*<\\/[^>]+>)*)\\s*(?=\\n|$)`, "giu"), "$1\n$2")
     .replace(new RegExp(`((?:https?:\\/\\/|\\/)[^\\n\\s]+?)(?=${buttonWords}\\s*:?)`, "giu"), "$1\n")
-    .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s+кнопка|Белая\\s+кнопка))`, "giu"), "$1\n")
+    .replace(new RegExp(`(${siteWords})(?=\\s*(?:Кнопка|Button|Green\\s*button|White\\s*button|Зел[её]ная\\s*кнопка|Белая\\s*кнопка))`, "giu"), "$1\n")
     .replace(new RegExp(`(\\([^)]+\\))\\s*(${siteWords})`, "giu"), "$1\n$2")
     .replace(new RegExp(`(https?:\\/\\/[^\\n\\s]+|\\/[^\\n\\s)]+)\\n(?!${siteWords}|${buttonWords}\\s*:?|message\\.service|18\\+)([?&=/#\\w-])`, "giu"), "$1$2");
 }
@@ -613,7 +672,7 @@ function splitSitePrefix(line) {
 }
 
 function isButtonLine(line) {
-  return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:/iu.test(stripTagsWithSpaces(line));
+  return /^(Кнопка\s*зел[её]ная|Зел[её]ная\s*кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s*кнопка|Button\s*white|White\s*button)\s*:/iu.test(stripTagsWithSpaces(line));
 }
 
 function splitSitePrefixedButton(line) {
@@ -628,14 +687,14 @@ function splitSitePrefixedButton(line) {
       : "";
   if (!marker) return null;
 
-  const button = plain.match(/(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:/iu);
+  const button = plain.match(/(Кнопка\s*зел[её]ная|Зел[её]ная\s*кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s*кнопка|Button\s*white|White\s*button)\s*:/iu);
   if (!button || button.index === 0) return null;
 
   return { marker, button: plain.slice(button.index).trim() };
 }
 
 function matchButtonMarker(line) {
-  return stripTagsWithSpaces(line).match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
+  return stripTagsWithSpaces(line).match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s*кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s*кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
 }
 
 function parseButtonBlockAt(lines, index) {
@@ -700,11 +759,11 @@ function parseButtonScopedUrlsAt(lines, index) {
     const site = splitSitePrefixLoose(lines[cursor] || "");
     if (!site) break;
 
-    let urls = matchedUrls(site.rest);
+    let urls = matchedActionUrls(site.rest);
     let consumedLines = 1;
 
     if (!urls.length) {
-      urls = matchedUrls(stripTags(lines[cursor + 1] || ""));
+      urls = matchedActionUrls(stripTags(lines[cursor + 1] || ""));
       if (urls.length) consumedLines = 2;
     }
 
@@ -729,13 +788,127 @@ function parseButtonScopedUrlsAt(lines, index) {
   };
 }
 
+function serviceKeyNumber(line) {
+  const plain = stripTags(line);
+  const match = plain.match(/^message\.service(?:\.[a-z0-9_-]+)*\.(\d+)(?:\.topic)?$/i);
+  return match ? match[1] : "";
+}
+
+function isTopicServiceKeyLine(line) {
+  return /^message\.service(?:\.[a-z0-9_-]+)*\.\d+\.topic$/i.test(stripTags(line));
+}
+
+function imageGalleryUrlsFromLine(line) {
+  const htmlUrls = [...String(line || "").matchAll(/\bhref="([^"]+)"/giu)]
+    .map((match) => cleanUrl(match[1]))
+    .filter(isImageGalleryUrl);
+  const visibleUrls = findUrlMatches(stripTagsWithSpaces(line))
+    .map((match) => match.url)
+    .filter(isImageGalleryUrl);
+
+  return [...htmlUrls, ...visibleUrls].filter((url, index, urls) => urls.indexOf(url) === index);
+}
+
+function stripImageGalleryUrlsFromText(value) {
+  let text = stripTagsWithSpaces(value).replace(/&amp;/g, "&");
+  imageGalleryUrlsFromLine(value).forEach((url) => {
+    text = text
+      .replace(new RegExp(`\\s*\\(?\\s*${escapeRegExp(url)}\\s*\\)?\\s*`, "gu"), " ")
+      .replace(new RegExp(`\\s*\\(?\\s*${escapeRegExp(url.replace(/&/g, "&amp;"))}\\s*\\)?\\s*`, "gu"), " ");
+  });
+
+  return text.replace(/\[\s*\]/g, "").replace(/\s+/g, " ").trim();
+}
+
+function knownImageButtonGroupLabel(text) {
+  return pcImageButtonGroupByText.get(imageButtonTextKey(text))?.label || "";
+}
+
+function prepareImageGalleryButtonRows(text) {
+  const lines = normalizeInputText(text).split("\n");
+  const output = [];
+  const detectedRows = [];
+  const positionGroups = {};
+  let language = "";
+  let currentKeyNumber = "";
+  let buttonPosition = 0;
+  let sectionTextParts = [];
+
+  function groupForPosition(positionKey, buttonText) {
+    const known = knownImageButtonGroupLabel(buttonText);
+    if (known && !positionGroups[positionKey]) positionGroups[positionKey] = known;
+    if (!positionGroups[positionKey]) positionGroups[positionKey] = buttonText;
+    return positionGroups[positionKey];
+  }
+
+  for (const line of lines) {
+    const nextLanguage = languageHeader(line);
+    if (nextLanguage) language = normalizeImageButtonLanguage(nextLanguage) || nextLanguage;
+
+    if (isServiceKeyLine(line) && !isTopicServiceKeyLine(line)) {
+      currentKeyNumber = serviceKeyNumber(line);
+      buttonPosition = 0;
+      sectionTextParts = [];
+    } else if (isTopicServiceKeyLine(line)) {
+      sectionTextParts = [];
+    }
+
+    const marker = matchButtonMarker(line);
+    const imageUrl = imageGalleryUrlsFromLine(line)[0] || "";
+    if (!marker || !imageUrl) {
+      const plain = stripTagsWithSpaces(line);
+      if (
+        plain &&
+        !isServiceKeyLine(line) &&
+        !isLineBreakInstruction(line) &&
+        !siteMarker(line) &&
+        !matchButtonMarker(line) &&
+        !matchedActionUrls(plain).length &&
+        !imageGalleryUrlsFromLine(line).length
+      ) {
+        sectionTextParts.push(plain);
+      }
+      output.push(line);
+      continue;
+    }
+
+    const markerLabel = marker[1];
+    const buttonText = stripImageGalleryUrlsFromText(marker[2]);
+    if (!buttonText) {
+      output.push(line);
+      continue;
+    }
+
+    buttonPosition += 1;
+    const color = buttonColorFromMarker(markerLabel);
+    const positionKey = currentKeyNumber ? `${currentKeyNumber}:${buttonPosition}` : "";
+    const rowLanguage = language || inferLanguageFromContent(sectionTextParts.join("\n")) || inferLanguageFromContent(buttonText);
+    const row = {
+      scope: "pc",
+      language: rowLanguage,
+      text: buttonText,
+      group: positionKey ? groupForPosition(positionKey, buttonText) : knownImageButtonGroupLabel(buttonText),
+      green: color === "green" ? imageUrl : "",
+      white: color === "white" ? imageUrl : "",
+      width: 319,
+      height: 40,
+    };
+
+    detectedRows.push(row);
+    output.push(`${markerLabel}: ${buttonText}`);
+  }
+
+  registerDetectedImageButtonRows(detectedRows);
+  return output.join("\n");
+}
+
 function normalizeButtonBlocks(value) {
-  const lines = normalizeInputText(value).split("\n");
+  const lines = prepareImageGalleryButtonRows(value).split("\n");
   const out = [];
   let index = 0;
 
   function splitMultipleUrls(value) {
-    return matchedUrls(value);
+    return matchedActionUrls(value);
   }
 
   function pushExpandedButton(label, text, url) {
@@ -746,7 +919,7 @@ function normalizeButtonBlocks(value) {
 
   function parseEmbeddedSiteUrlLine(value) {
     const plain = stripTagsWithSpaces(value);
-    const urlMatch = findUrlMatches(plain)[0];
+    const urlMatch = findUrlMatches(plain).find((match) => !isImageGalleryUrl(match.url));
     if (!urlMatch) return null;
 
     const beforeUrl = plain.slice(0, urlMatch.index).trim();
@@ -779,22 +952,22 @@ function normalizeButtonBlocks(value) {
   function buildButtonLine(label, rest, nextLine) {
     const cleanRest = stripTags(rest);
     const inlineUrl = cleanRest.match(/^(.+?)\s+\(((?:https?:\/\/|\/)[\s\S]+?)\)?\s*$/iu);
-    if (inlineUrl) {
+    if (inlineUrl && !isImageGalleryUrl(inlineUrl[2])) {
       return { text: inlineUrl[1].trim(), url: cleanUrl(inlineUrl[2]), consumedNext: false };
     }
 
     const inlinePlainUrl = cleanRest.match(/^(.+?)\s+((?:https?:\/\/|\/)\S+)\s*$/iu);
-    if (inlinePlainUrl) {
+    if (inlinePlainUrl && !isImageGalleryUrl(inlinePlainUrl[2])) {
       return { text: inlinePlainUrl[1].trim(), url: cleanUrl(inlinePlainUrl[2]), consumedNext: false };
     }
 
-    const urlMatch = findUrlMatches(cleanRest)[0];
+    const urlMatch = findUrlMatches(cleanRest).find((match) => !isImageGalleryUrl(match.url));
     if (urlMatch && cleanRest.slice(urlMatch.end).trim() === "") {
       return { text: cleanRest.slice(0, urlMatch.index).trim(), url: urlMatch.url, consumedNext: false };
     }
 
     const url = stripTags(nextLine || "");
-    if (cleanRest && /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url)) {
+    if (cleanRest && /^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url) && !isImageGalleryUrl(url)) {
       return { text: cleanRest, url: cleanUrl(url), consumedNext: true };
     }
 
@@ -803,7 +976,8 @@ function normalizeButtonBlocks(value) {
 
   function urlOnlyLine(value) {
     const match = stripTags(value || "").match(/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu);
-    return match ? cleanMatchedUrl(match[1]) : "";
+    const url = match ? cleanMatchedUrl(match[1]) : "";
+    return isImageGalleryUrl(url) ? "" : url;
   }
 
   function pushSiteButton(label, site, next, fallbackText = "") {
@@ -880,7 +1054,7 @@ function normalizeButtonBlocks(value) {
   while (index < lines.length) {
     const line = lines[index];
     const plain = stripTags(line);
-    const bareMarker = plain.match(/^(?:Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*$/iu);
+    const bareMarker = plain.match(/^(?:Кнопка\s*зел[её]ная|Зел[её]ная\s*кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s*кнопка|Button\s*white|White\s*button)\s*$/iu);
     if (bareMarker) {
       const embedded = parseEmbeddedSiteUrlLine(lines[index + 1] || "");
       if (embedded) {
@@ -913,7 +1087,7 @@ function normalizeButtonBlocks(value) {
         }
       }
     }
-    const marker = plain.match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
+    const marker = plain.match(/^(Кнопка\s*зел[её]ная|Зел[её]ная\s*кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s*кнопка|Button\s*white|White\s*button)\s*:?\s*(.*)$/iu);
 
     if (!marker) {
       out.push(line);
@@ -941,6 +1115,14 @@ function normalizeButtonBlocks(value) {
         pushExpandedButton(label, built.text, built.url);
         index += built.consumedNext ? 2 : 1;
         continue;
+      }
+
+      if (rest) {
+        const consumed = pushLabeledSiteButtons(label, rest, next);
+        if (consumed !== null) {
+          index = consumed;
+          continue;
+        }
       }
     }
 
@@ -1024,7 +1206,7 @@ function normalizeButtonBlocks(value) {
 
     if (rest && next < lines.length) {
       const url = stripTags(lines[next]);
-      if (/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url)) {
+      if (/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url) && !isImageGalleryUrl(url)) {
         out.push(`${label}: ${rest} (${cleanUrl(url)})`);
         index = next + 1;
         continue;
@@ -1180,7 +1362,7 @@ function serviceKeyBase(key) {
 
 function languageHeader(line) {
   const plain = stripTags(line).replace(/\s+/g, " ").trim();
-  const match = plain.match(/^(?:PC|COM|MOB|WEB|APP|AN)?\s*(ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|ARG|LATAM|LAT|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b/i);
+  const match = plain.match(/^(?:PC|COM|MOB|WEB|APP|AN)?\s*(ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|AR|ARG|LATAM|LAT|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b/i);
   if (!match) return "";
   return match[1].toUpperCase();
 }
@@ -1209,6 +1391,7 @@ function inferLanguageFromContent(value) {
   const text = plainOutputText(value).toLowerCase();
   if (!text) return "";
   if (/[а-яё]/iu.test(text)) return "RUS";
+  if (/[\u0259\u018f\u0131\u0130\u011f\u011e\u015f\u015e]/u.test(text) || /(?:fribet\s*[\u0259e]ld[\u0259e]|depozit\s*qoyun|m[\u0259e]bl[\u0259e]\u011find[\u0259e]|\u00fc\u00e7\u00fcn|v[\u0259e]siz[\u0259e]|\u0259trafl[\u0131i])/iu.test(text)) return "AZ";
   if (/[¿¡ñáéíóúü]/iu.test(text) || /\b(?:pod[eé]s|jug[aá]|campeones|responsabilidad)\b/iu.test(text)) return "ARG";
   if (/(?:iltimos|batafsil|jahon|chempion|ishtirok|yapsiz|uchun|bilan|yo'l|o'|g')/iu.test(text)) return "UZB";
   if (/[a-z]/iu.test(text)) return "ENG";
@@ -1263,7 +1446,7 @@ function parseNotifications(text) {
 
   function save() {
     if (!key) return;
-    const effectiveLanguage = sectionLanguage || language;
+    const effectiveLanguage = sectionLanguage || language || inferLanguageFromContent([sectionTopic, ...body].join("\n"));
     sections.push({
       key,
       language: effectiveLanguage,
@@ -1326,7 +1509,7 @@ function parseNotifications(text) {
     }
 
     if (awaitingTopicFor && plain && !/неразрывные\s+пробелы/iu.test(plain)) {
-      const inferredLanguage = awaitingTopicLanguage || (isBareNumericServiceKey(awaitingTopicFor) ? inferLanguageFromContent(raw) : "");
+      const inferredLanguage = awaitingTopicLanguage || inferLanguageFromContent(raw);
       enqueueTopic(awaitingTopicFor, inferredLanguage, plainOutputText(raw));
       awaitingTopicFor = "";
       awaitingTopicLanguage = "";
@@ -1575,7 +1758,7 @@ function parseTextChunk(text) {
 }
 
 function extractSegments(input) {
-  const buttonPattern = /(Кнопка\s*зел[её]ная|Зел[её]ная\s+кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s+кнопка|Button\s*white|White\s*button)\s*:\s*([^\n(]+?)\s*\(((?:https?:\/\/|\/)[^)]+)\)/giu;
+  const buttonPattern = /(Кнопка\s*зел[её]ная|Зел[её]ная\s*кнопка|Button\s*green|Green\s*button|Кнопка\s*белая|Белая\s*кнопка|Button\s*white|White\s*button)\s*:\s*([^\n(]+?)\s*\(((?:https?:\/\/|\/)[^)]+)\)/giu;
   const segments = [];
   let lastIndex = 0;
   let pendingButtons = [];
