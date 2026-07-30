@@ -623,6 +623,22 @@ textarea {
   font-weight: 700;
 }
 
+.image-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.image-group-remove {
+  min-height: 28px;
+  padding: 0 10px;
+  border-color: #d9b8b8;
+  color: #a33131;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .image-group-row-empty td {
   background: #f3f5f2;
   color: #667066;

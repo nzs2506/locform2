@@ -38,7 +38,7 @@ function normalizeLanguage(value) {
   if (compact === "EN" || compact === "ENG") return "ENG";
   if (compact === "UZ" || compact === "UZB") return "UZB";
   if (compact === "AZ" || compact === "AZE") return "AZ";
-  if (["ARG", "LAT", "LATAM", "ES", "ESP", "SPA", "ESLATAM"].includes(compact)) return "ES_LATAM";
+  if (["AR", "ARG", "LAT", "LATAM", "ES", "ESP", "SPA", "ESLATAM"].includes(compact)) return "ES_LATAM";
   return compact;
 }
 
@@ -153,12 +153,11 @@ export default {
       return jsonResponse(request, { error: "Wrong password" }, 401);
     }
 
-    const incomingRows = normalizeRows(payload?.rows);
-    if (!incomingRows.length) {
-      return jsonResponse(request, { error: "No valid rows to save" }, 400);
+    if (!Array.isArray(payload?.rows)) {
+      return jsonResponse(request, { error: "Rows must be an array" }, 400);
     }
 
-    const rows = mergeRows(await readRows(env), incomingRows);
+    const rows = mergeRows(normalizeRows(payload.rows));
     await env.IMAGE_BUTTONS.put(STORAGE_KEY, JSON.stringify(rows, null, 2));
 
     return jsonResponse(request, { ok: true, count: rows.length, rows });

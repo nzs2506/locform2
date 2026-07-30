@@ -292,7 +292,7 @@ async function loadSharedImageButtons(options = {}) {
       return false;
     }
 
-    imageButtonRows = mergeImageButtonRows(defaultImageButtonRows, imageButtonRows, sharedRows);
+    imageButtonRows = imageButtonRowsForJson(sharedRows);
     persistImageButtonRows();
     renderImageButtonTable();
     renderCurrentNotification();
@@ -301,7 +301,7 @@ async function loadSharedImageButtons(options = {}) {
   } catch (error) {
     const fallbackRows = await fetchBundledSharedImageButtonRows().catch(() => []);
     if (fallbackRows.length) {
-      imageButtonRows = mergeImageButtonRows(defaultImageButtonRows, imageButtonRows, fallbackRows);
+      imageButtonRows = imageButtonRowsForJson(fallbackRows);
       persistImageButtonRows();
       renderImageButtonTable();
       renderCurrentNotification();
@@ -351,7 +351,7 @@ async function saveSharedImageButtons(options = {}) {
 
     const payload = await response.json().catch(() => ({}));
     const savedRows = Array.isArray(payload.rows) ? payload.rows : rows;
-    imageButtonRows = mergeImageButtonRows(defaultImageButtonRows, imageButtonRows, savedRows);
+    imageButtonRows = imageButtonRowsForJson(savedRows);
     persistImageButtonRows();
     setSharedImageButtonsStatus(`${isAuto ? "Новые картинки сохранены" : "Сохранено"} в общий спейс: ${payload.count || savedRows.length} строк.`, "ok");
     renderImageButtonTable();
@@ -2453,7 +2453,14 @@ function renderImageButtonTable() {
   imageButtonRowsBody.innerHTML = displayRows.map(({ row, index, group }) => {
     const inheritedGroupLabel = activeImageButtonScope === "pc" && group && !group.other ? group.label : "";
     const groupHead = group && group.id !== lastGroupId
-      ? `<tr class="image-group-row${group.other ? " image-group-row-empty" : ""}"><td colspan="8">${escapeHtml(group.label)}</td></tr>`
+      ? `<tr class="image-group-row${group.other ? " image-group-row-empty" : ""}">
+          <td colspan="8">
+            <div class="image-group-head">
+              <span>${escapeHtml(group.label)}</span>
+              <button class="image-group-remove" type="button" data-image-remove-group="${escapeAttribute(group.id)}">Удалить блок</button>
+            </div>
+          </td>
+        </tr>`
       : "";
     if (group) lastGroupId = group.id;
 
@@ -2497,6 +2504,19 @@ function syncVisibleImageButtonRows({ removeIndex = null, prune = false } = {}) 
   imageButtonRows = nextRows
     .filter((_, index) => index !== removeIndex)
     .filter((row) => !prune || (row.text && (row.green || row.white)));
+}
+
+function removeImageButtonGroup(groupId) {
+  if (!groupId || activeImageButtonScope !== "pc") return;
+
+  syncVisibleImageButtonRows();
+  imageButtonRows = imageButtonRows.filter((row) => (
+    row.scope !== activeImageButtonScope || pcImageButtonGroupFor(row).id !== groupId
+  ));
+  persistImageButtonRows();
+  renderImageButtonTable();
+  renderCurrentNotification();
+  setSharedImageButtonsStatus("Блок удален локально. Чтобы удалить его для всех, нажмите «Сохранить в общий».", "muted");
 }
 
 function openImageButtons() {
@@ -2727,10 +2747,19 @@ imageScopeTabs.addEventListener("click", (event) => {
   renderImageButtonTable();
 });
 imageButtonRowsBody.addEventListener("click", (event) => {
+  const groupRemove = event.target.closest("[data-image-remove-group]");
+  if (groupRemove) {
+    removeImageButtonGroup(groupRemove.dataset.imageRemoveGroup);
+    return;
+  }
+
   const remove = event.target.closest("[data-image-remove]");
   if (!remove) return;
   syncVisibleImageButtonRows({ removeIndex: Number(remove.dataset.imageRemove) });
+  persistImageButtonRows();
   renderImageButtonTable();
+  renderCurrentNotification();
+  setSharedImageButtonsStatus("Строка удалена локально. Чтобы удалить ее для всех, нажмите «Сохранить в общий».", "muted");
 });
 addImageButtonRowBtn.addEventListener("click", () => {
   syncVisibleImageButtonRows();
