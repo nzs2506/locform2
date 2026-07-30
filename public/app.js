@@ -198,7 +198,7 @@ function normalizeImageButtonRow(row) {
   return {
     scope: /^(?:pc|mb6r|mb3b|all)$/i.test(row?.scope || "") ? String(row.scope).toLowerCase() : "all",
     language: normalizeImageButtonLanguage(row?.language || ""),
-    text: String(row?.text || "").replace(/\s+/g, " ").trim(),
+    text: stripImageGalleryUrlsFromText(row?.text || ""),
     group: String(row?.group || "").replace(/\s+/g, " ").trim(),
     green: cleanUrl(row?.green || ""),
     white: cleanUrl(row?.white || ""),
@@ -817,7 +817,12 @@ function stripImageGalleryUrlsFromText(value) {
       .replace(new RegExp(`\\s*\\(?\\s*${escapeRegExp(url.replace(/&/g, "&amp;"))}\\s*\\)?\\s*`, "gu"), " ");
   });
 
-  return text.replace(/\[\s*\]/g, "").replace(/\s+/g, " ").trim();
+  return text
+    .replace(/\s*\(?\s*https?:\/\/image-gallery-s3(?:-[a-z0-9-]+)?\.mindbox\.ru\/[^\s)\]]+\s*\)?/giu, " ")
+    .replace(/\s*\(?\s*https?:?\/{0,2}\s*$/iu, "")
+    .replace(/\[\s*\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function knownImageButtonGroupLabel(text) {
