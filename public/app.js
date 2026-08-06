@@ -622,6 +622,16 @@ function matchedActionUrls(value) {
   return matchedUrls(value).filter((url) => !isImageGalleryUrl(url));
 }
 
+function siteMarkerMatchesTarget(marker, target) {
+  return marker === target || marker === "both";
+}
+
+function siteOutputLabel(marker) {
+  if (marker === "old") return "Old version";
+  if (marker === "both") return "both versions";
+  return "redesign";
+}
+
 function stripTags(value) {
   return String(value || "").replace(/<[^>]+>/g, "").trim();
 }
@@ -643,7 +653,7 @@ function plainOutputText(value) {
 }
 
 function normalizeInputText(value) {
-  const siteWords = "(?:old\\s*site|oldsite|old\\s*version|oldversion|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
+  const siteWords = "(?:both\\s*versions|bothversions|обе\\s*версии|old\\s*site|oldsite|old\\s*version|oldversion|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
   const buttonWords = "(?:Кнопка\\s*зел[её]ная|Зел[её]ная\\s*кнопка|Button\\s*green|Green\\s*button|Кнопка\\s*белая|Белая\\s*кнопка|Button\\s*white|White\\s*button)";
   return String(value || "")
     .replace(/\r\n?/g, "\n")
@@ -662,6 +672,7 @@ function normalizeInputText(value) {
 function siteMarker(line) {
   const plain = stripTagsWithSpaces(line).toLowerCase();
   const compact = plain.replace(/[\s._-]+/g, "");
+  if (compact === "bothversions" || compact === "обеверсии") return "both";
   if (compact === "oldsite" || compact === "oldversion" || compact === "старыйсайт") return "old";
   if (
     compact === "redesignsite" ||
@@ -678,6 +689,9 @@ function splitSitePrefix(line) {
   const plain = stripTagsWithSpaces(line);
   const lower = plain.toLowerCase();
   const aliases = [
+    ["both versions", "both"],
+    ["bothversions", "both"],
+    ["обе версии", "both"],
     ["redesign site", "redesign"],
     ["redesignsite", "redesign"],
     ["new version", "redesign"],
@@ -707,9 +721,12 @@ function isButtonLine(line) {
 function splitSitePrefixedButton(line) {
   const plain = stripTagsWithSpaces(line);
   const compact = plain.toLowerCase().replace(/[\s._-]+/g, "");
+  const bothPrefixes = ["bothversions", "обеверсии"];
   const oldPrefixes = ["oldsite", "oldversion", "старыйсайт"];
   const redesignPrefixes = ["redesignsite", "redesign", "newsite", "newversion", "редизайн", "новыйсайт"];
-  const marker = oldPrefixes.some((prefix) => compact.startsWith(prefix))
+  const marker = bothPrefixes.some((prefix) => compact.startsWith(prefix))
+    ? "both"
+    : oldPrefixes.some((prefix) => compact.startsWith(prefix))
     ? "old"
     : redesignPrefixes.some((prefix) => compact.startsWith(prefix))
       ? "redesign"
@@ -976,6 +993,8 @@ function normalizeButtonBlocks(value) {
       { re: /new\s*version/iu, marker: "redesign" },
       { re: /new\s*site/iu, marker: "redesign" },
       { re: /redesign/iu, marker: "redesign" },
+      { re: /both\s*versions/iu, marker: "both" },
+      { re: /обе\s*версии/iu, marker: "both" },
       { re: /old\s*version/iu, marker: "old" },
       { re: /old\s*site/iu, marker: "old" },
     ];
@@ -1027,7 +1046,7 @@ function normalizeButtonBlocks(value) {
   }
 
   function pushSiteButton(label, site, next, fallbackText = "") {
-    const canonicalMarker = site.marker === "old" ? "Old version" : "redesign";
+    const canonicalMarker = siteOutputLabel(site.marker);
     const siteRest = String(site.rest || "").replace(/^[:：]\s*/, "").trim();
 
     if (!siteRest && next < lines.length) {
@@ -1086,7 +1105,7 @@ function normalizeButtonBlocks(value) {
         out.push("Old version");
         pushExpandedButton(label, buttonText, urls[1]);
       } else {
-        out.push(site.marker === "old" ? "Old version" : "redesign");
+        out.push(siteOutputLabel(site.marker));
         pushExpandedButton(label, buttonText, urls[0]);
       }
 
@@ -1104,7 +1123,7 @@ function normalizeButtonBlocks(value) {
     if (bareMarker) {
       const embedded = parseEmbeddedSiteUrlLine(lines[index + 1] || "");
       if (embedded) {
-        out.push(embedded.marker === "old" ? "Old version" : "redesign");
+        out.push(siteOutputLabel(embedded.marker));
         pushExpandedButton(plain, embedded.label, embedded.url);
         const consumed = pushLabeledSiteButtons(plain, embedded.label, index + 2);
         index = consumed !== null ? consumed : index + 2;
@@ -1191,7 +1210,7 @@ function normalizeButtonBlocks(value) {
     if (!rest && next < lines.length) {
       const embedded = parseEmbeddedSiteUrlLine(lines[next] || "");
       if (embedded) {
-        out.push(embedded.marker === "old" ? "Old version" : "redesign");
+        out.push(siteOutputLabel(embedded.marker));
         pushExpandedButton(label, embedded.label, embedded.url);
         const consumed = pushLabeledSiteButtons(label, embedded.label, next + 1);
         index = consumed !== null ? consumed : next + 1;
@@ -1635,7 +1654,7 @@ function bodyForSite(text, target) {
     const line = lines[index];
     const prefixed = splitSitePrefixedButton(line);
     if (prefixed) {
-      if (prefixed.marker === target) out.push(prefixed.button);
+      if (siteMarkerMatchesTarget(prefixed.marker, target)) out.push(prefixed.button);
       scope = "";
       scopedButtonCluster = false;
       index += 1;
@@ -1653,7 +1672,7 @@ function bodyForSite(text, target) {
     const scopedUrlsButton = parseButtonScopedUrlsAt(lines, index);
     if (scopedUrlsButton) {
       scopedUrlsButton.variants
-        .filter((variant) => variant.marker === target)
+        .filter((variant) => siteMarkerMatchesTarget(variant.marker, target))
         .forEach((variant) => {
           out.push(`${scopedUrlsButton.marker}: ${scopedUrlsButton.text} (${variant.url})`);
         });
@@ -1682,7 +1701,7 @@ function bodyForSite(text, target) {
     if (buttonBlock) {
       if (scopedButtonCluster) {
         if (
-          scope === target ||
+          siteMarkerMatchesTarget(scope, target) ||
           (buttonColorFromMarker(buttonBlock.marker) === "white" && isSharedLandingButtonUrl(buttonBlock.url))
         ) out.push(buttonBlock.inline);
         index = buttonBlock.nextIndex;
@@ -2471,31 +2490,8 @@ function renderTopicOutput(topic) {
   return `${plainTopic}\n\nredesign\n${redesignTopic}`;
 }
 
-function redesignUrlFromOld(url) {
-  const raw = String(url || "").replace(/&amp;/g, "&").trim();
-  let parsed;
-
-  try {
-    parsed = new URL(raw, "https://locform.local");
-  } catch {
-    return raw;
-  }
-
-  const urlWeb = parsed.searchParams.get("url_web");
-  if (!urlWeb) return raw;
-
-  const cleanPath = urlWeb.trim();
-  if (!cleanPath || /^lps\//i.test(cleanPath.replace(/^\/+/, ""))) return raw;
-
-  const relativePath = `/${cleanPath
-    .replace(/^\/+/, "")
-    .replace(/^(?:en|su|ru|rus|uzb|uz|ar|arg|latam|lat|es|spa|esp)\//i, "")}`;
-
-  const params = new URLSearchParams(parsed.search);
-  params.delete("url_web");
-  const query = params.toString().replace(/\+/g, "%20");
-
-  return query ? `${relativePath}?${query}` : relativePath;
+function cleanRenderedButtonUrl(url) {
+  return cleanButtonUrlCandidate(url) || cleanUrl(String(url || "").replace(/&amp;/g, "&"));
 }
 
 function normalizeRedesignSegments(segments) {
@@ -2505,7 +2501,7 @@ function normalizeRedesignSegments(segments) {
       ...segment,
       buttons: segment.buttons.map((button) => ({
         ...button,
-        url: redesignUrlFromOld(button.url),
+        url: cleanRenderedButtonUrl(button.url),
       })),
     };
   });

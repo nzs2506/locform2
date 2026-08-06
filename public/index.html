@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.59</title>
+  <title>LOCform 3.8.60</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.59">
+  <link rel="stylesheet" href="styles.css?v=3.8.60">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.59</h1>
+              <h1>LOCform 3.8.60</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
@@ -148,7 +148,7 @@ Main notification text...</code></pre>
         <p>Если такая фраза есть в topic, в поле Topic появится обычная версия и отдельная версия для <code>redesign</code> с <code>&amp;nbsp;</code>.</p>
 
         <h3>3. Кнопки и версии сайта</h3>
-        <p><code>redesign</code>, <code>new site</code>, <code>new version</code> — ссылка для Redesign. <code>Old version</code>, <code>old site</code> — ссылка для Web и Mobile.</p>
+        <p><code>redesign</code>, <code>new site</code>, <code>new version</code> — ссылка для Redesign. <code>Old version</code>, <code>old site</code> — ссылка для Web и Mobile. <code>both versions</code> или <code>обе версии</code> — одна обычная action-ссылка сразу для Redesign, Web и Mobile; для ссылок <code>image-gallery-s3</code> этот маркер не используйте.</p>
         <p>Самый понятный формат для скрипта — сначала цвет кнопки, потом фраза в кнопке, потом версия сайта, потом отдельной строкой ссылка. Скобки вокруг ссылки можно ставить: скрипт уберёт внешние <code>(</code> и <code>)</code>.</p>
         <p>Если внутри ссылки случайно стоит пробел перед <code>?</code>, <code>&amp;</code>, <code>=</code> или после них, скрипт уберёт его при сборке кнопки.</p>
         <pre><code>Зеленая кнопка
@@ -167,6 +167,11 @@ redesign
 
 Old version
 (https://go2m.biz/...url_web=en/promotions/promotion/1578...)</code></pre>
+        <p>Если одна и та же обычная ссылка должна попасть во все версии, используйте <code>both versions</code> / <code>обе версии</code>.</p>
+        <pre><code>Зеленая кнопка
+Узнать больше
+both versions
+(/promotions/promotion/1578?utm_medium=an...)</code></pre>
         <p>Если кнопок несколько, лучше писать их подряд одним блоком, без обычного текста между ними.</p>
         <pre><code>Зеленая кнопка: Получить бонус (/account/deposit)
 Белая кнопка: Узнать больше (/promotions/promotion/411)</code></pre>
@@ -199,7 +204,7 @@ Old version
         <p>Если фраза в Word уже содержит ссылку, скрипт сохранит её как подчёркнутую курсивную ссылку. Лучше вешать ссылку только на нужную фразу, не на весь абзац.</p>
 
         <h3>8. Рекомендуемый формат кнопок</h3>
-        <p>Для одной кнопки пишите отдельным блоком: цвет кнопки, текст кнопки, версия сайта и ссылка для этой версии. Если есть картинка для Redesign, ссылку <code>image-gallery-s3</code> можно поставить рядом с текстом кнопки. Action-ссылки для <code>Redesign</code> и <code>Old version</code> пишите отдельными строками ниже.</p>
+        <p>Для одной кнопки пишите отдельным блоком: цвет кнопки, текст кнопки, версия сайта и ссылка для этой версии. Если есть картинка для Redesign, ссылку <code>image-gallery-s3</code> можно поставить рядом с текстом кнопки. Action-ссылки для <code>Redesign</code>, <code>Old version</code> и <code>both versions</code> пишите отдельными строками ниже.</p>
         <pre><code>Зеленая кнопка:
 Перейти в линию https://image-gallery-s3-stable.mindbox.ru/....png
 Redesign
@@ -207,6 +212,11 @@ Redesign
 
 Old version
 (https://go2balancer.net/...url_web=su/sport...)</code></pre>
+        <p>Если action-ссылка одинаковая для старой версии и редизайна, пишите так. Это работает только для обычной ссылки действия; картинка остаётся только подсказкой для Redesign-кнопки.</p>
+        <pre><code>Зеленая кнопка:
+Перейти в линию https://image-gallery-s3-stable.mindbox.ru/green-button.png
+both versions
+(/sport?utm_medium=an...)</code></pre>
         <p>Если кнопок две, оформляйте каждую своим мини-блоком. Порядок в HTML будет таким же, как в Word: сначала зелёная, потом белая или наоборот.</p>
         <pre><code>Зеленая кнопка:
 Перейти в линию https://image-gallery-s3-stable.mindbox.ru/green-button.png
@@ -275,6 +285,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.59"></script>
+  <script src="app.js?v=3.8.60"></script>
 </body>
 </html>
