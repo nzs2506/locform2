@@ -2386,7 +2386,7 @@ function makeButtonHtml(version, buttons, options = {}) {
 
   if (!white) {
     if (version === "compact") {
-      return `<div style="display: inline-flex; gap: 8px;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            ${compactSize(green)} padding: 0 12px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none;">\n    ${safeText(green.text)}\n  </a>\n</div>`;
+      return `<div style="display: flex; flex-direction: column; gap: 8px;">\n  <a href="${green.url}" target="_blank"\n     style="display: inline-flex; justify-content: center; align-items: center;\n            ${compactSize(green)} padding: 0 12px;\n            background-color: #07974D; color: #FFFFFF; text-decoration: none;\n            font-weight: normal; text-align: center;\n            border-radius: 4px; font-family: Arial, sans-serif; font-size: 12px;\n            box-sizing: border-box; opacity: 1; border: none;">\n    ${safeText(green.text)}\n  </a>\n</div>`;
     }
 
     if (version === "mobile") {
@@ -2429,6 +2429,7 @@ function renderSegments(version, segments, options = {}) {
     if (segment.type === "break") {
       const isRedesignVersion = version === "pc" || version === "pcMb6r" || version === "pcMb3b";
       if (previous?.kind === "list") {
+        if (version !== "compact" && next?.type === "button") continue;
         const listBreak = version === "compact" ? "<br><br>\n" : "\n<br>\n";
         const lastRendered = String(rendered[rendered.length - 1] || "");
         if (version === "compact") {
@@ -2460,6 +2461,10 @@ function renderSegments(version, segments, options = {}) {
 
     if ((version === "compact" || version === "mobile") && segment.type === "button") {
       const lastRendered = String(rendered[rendered.length - 1] || "");
+      if (version === "mobile" && lastRendered.match(/<\/(?:ul|ol)>\s*$/i)) {
+        rendered.push(`\n${html}`);
+        continue;
+      }
       if (!lastRendered.includes("<br><br>") && !lastRendered.match(/<br>\s*$/)) rendered.push("\n\n<br><br>\n\n");
       rendered.push(html);
       continue;
@@ -2468,6 +2473,8 @@ function renderSegments(version, segments, options = {}) {
     const previousLineEndsWithColon = previous?.type === "line" && /[:：]$/u.test(plainOutputText(previous.html));
     const separator = previous?.type === "line" && segment.type === "line"
       ? "<br>\n"
+      : version === "compact" && segment.kind === "list"
+        ? "<br><br>\n"
       : previousLineEndsWithColon && segment.kind === "list"
         ? version === "compact" ? "<br><br>\n" : "\n"
         : version === "compact" && previous?.kind === "list"
