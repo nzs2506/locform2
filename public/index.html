@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.61</title>
+  <title>LOCform 3.8.62</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.61">
+  <link rel="stylesheet" href="styles.css?v=3.8.62">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.61</h1>
+              <h1>LOCform 3.8.62</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
@@ -202,6 +202,7 @@ both versions
 
         <h3>7. Ссылки внутри текста</h3>
         <p>Если фраза в Word уже содержит ссылку, скрипт сохранит её как подчёркнутую курсивную ссылку. Лучше вешать ссылку только на нужную фразу, не на весь абзац.</p>
+        <p>Если видимый текст гиперссылки сам является URL, скрипт игнорирует скрытый Word-href и берёт именно URL, написанный текстом.</p>
 
         <h3>8. Рекомендуемый формат кнопок</h3>
         <p>Для одной кнопки пишите отдельным блоком: цвет кнопки, текст кнопки, версия сайта и ссылка для этой версии. Если есть картинка для Redesign, ссылку <code>image-gallery-s3</code> можно поставить рядом с текстом кнопки. Action-ссылки для <code>Redesign</code>, <code>Old version</code> и <code>both versions</code> пишите отдельными строками ниже.</p>
@@ -285,6 +286,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.61"></script>
+  <script src="app.js?v=3.8.62"></script>
 </body>
 </html>

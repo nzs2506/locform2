@@ -156,11 +156,18 @@ function absoluteInlineHref(href) {
   return value;
 }
 
+function visibleUrlText(value) {
+  const cleanLabel = String(value || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").trim();
+  return cleanButtonUrlCandidate(cleanLabel);
+}
+
 function inlineLinkHtml(href, label) {
+  const labelUrl = visibleUrlText(label);
+  if (labelUrl) return labelUrl;
+
   const safeHref = absoluteInlineHref(href).replace(/"/g, "%22");
   const cleanLabel = String(label || "").replace(/<[^>]+>/g, "").trim();
   if (!cleanLabel || cleanLabel === safeHref) return safeHref;
-  if (/^(?:https?:\/\/|\/)\S+$/i.test(cleanLabel)) return safeHref;
   return `<a href="${safeHref}" target="_blank"><i><u>${cleanLabel}</u></i></a>`;
 }
 
