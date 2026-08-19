@@ -2555,11 +2555,15 @@ function makeButtonHtml(version, buttons, options = {}) {
   if ((version === "pc" || version === "pcMb6r" || version === "pcMb3b") && allowImageButtons) {
     const imageEntries = buttons.map((button) => imageButtonEntryFor(version, button, allowImageButtons, imageButtonLanguage));
     if (imageEntries.some(Boolean)) {
-      return buttons.map((button, index) => (
+      const renderedButtons = buttons.map((button, index) => (
         imageEntries[index]
           ? redesignImageAnchor(button, imageEntries[index], index)
           : redesignTextAnchor(button, index)
       )).join("\n");
+
+      if (imageEntries.every(Boolean)) return renderedButtons;
+
+      return `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n  ${renderedButtons}\n\n</div>`;
     }
   }
 
