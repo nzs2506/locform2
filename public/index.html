@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.69</title>
+  <title>LOCform 3.8.70</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.69">
+  <link rel="stylesheet" href="styles.css?v=3.8.70">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.69</h1>
+              <h1>LOCform 3.8.70</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
@@ -173,11 +173,16 @@ Old version
 Узнать больше
 both versions
 (/promotions/promotion/1578?utm_medium=an...)</code></pre>
-        <p>Если в документе после текста кнопки стоит полная ссылка, а следом относительная ссылка, скрипт разложит их так: полная ссылка пойдёт в Web/Mobile, относительная — в Redesign.</p>
+        <p>Обычный URL для кнопки всегда пишите строго после <code>Old version</code>, <code>Redesign</code> или <code>Both versions</code>. URL рядом с фразой кнопки не считается адресом перехода.</p>
         <pre><code>Зеленая кнопка:
-Obtener tu bono https://go2m.biz/...url_web=ar/promotions/promotion/1632...
+Obtener tu bono
 both versions
 (/promotions/promotion/1632?utm_medium=an...)</code></pre>
+        <p>Для кнопки-картинки Redesign URL <code>image-gallery-s3...png</code> ставьте рядом с фразой: он попадёт только в <code>img src</code>. Адрес перехода всё равно пишите после маркера версии.</p>
+        <pre><code>Зеленая кнопка:
+Más información https://image-gallery-s3...png
+Redesign
+(/promotions/promotion/1408?utm_medium=an...)</code></pre>
         <p>Если кнопок несколько, лучше писать их подряд одним блоком, без обычного текста между ними.</p>
         <pre><code>Зеленая кнопка: Получить бонус (/account/deposit)
 Белая кнопка: Узнать больше (/promotions/promotion/411)</code></pre>
@@ -300,6 +305,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.69"></script>
+  <script src="app.js?v=3.8.70"></script>
 </body>
 </html>
