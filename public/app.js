@@ -91,6 +91,7 @@ const defaultImageButtonRows = [
   ["pc", "AZ", "\u018ftrafl\u0131 m\u0259lumat", "https://image-gallery-s3-stable.mindbox.ru/46ADAAA03ECF147E7D96193554B70B22601480406509ADF3E0D900359A92DF9D.png", "https://image-gallery-s3-stable.mindbox.ru/642E5CA04D3378994C08D9B50762BD52E1FF4D63C07243501A8EBBC6252F7253.png"],
 ].map(([scope, language, text, green, white]) => ({ scope, language, text, green, white, width: 319, height: 40 }));
 let imageButtonRows = loadImageButtonRows();
+let sessionImageButtonRows = [];
 
 const stableNames = [
   "Drops & Wins",
@@ -470,6 +471,8 @@ function registerDetectedImageButtonRows(rows) {
   const detectedRows = rows.map(normalizeImageButtonRow).filter((row) => row.text && (row.green || row.white));
   if (!detectedRows.length) return;
 
+  sessionImageButtonRows = mergeImageButtonRowsPreservingGroups(sessionImageButtonRows, detectedRows);
+
   const previousRows = imageButtonRows.slice();
   imageButtonRows = mergeImageButtonRowsPreservingGroups(imageButtonRows, detectedRows);
   if (!imageButtonRowsChanged(previousRows, imageButtonRows)) return;
@@ -564,15 +567,12 @@ function pcImageButtonGroupFor(row) {
   };
 }
 
-function imageButtonEntryFor(version, button, allowImageButtons = true, language = "") {
-  const scope = imageButtonScopeForVersion(version);
-  if (!allowImageButtons || !scope) return null;
-
+function imageButtonEntryFromRows(rows, scope, button, language = "") {
   const key = imageButtonTextKey(button.text);
   const wantedLanguage = normalizeImageButtonLanguage(language);
   if (!key) return null;
 
-  const candidates = imageButtonRows
+  const candidates = rows
     .filter((row) => imageButtonTextKey(row.text) === key)
     .filter((row) => row[button.color])
     .filter((row) => row.scope === scope || row.scope === "all")
@@ -585,6 +585,14 @@ function imageButtonEntryFor(version, button, allowImageButtons = true, language
     });
 
   return candidates[0] || null;
+}
+
+function imageButtonEntryFor(version, button, allowImageButtons = true, language = "") {
+  const scope = imageButtonScopeForVersion(version);
+  if (!allowImageButtons || !scope) return null;
+
+  return imageButtonEntryFromRows(sessionImageButtonRows, scope, button, language)
+    || imageButtonEntryFromRows(imageButtonRows, scope, button, language);
 }
 
 function buttonSegmentHasRedesignImage(version, segment, options = {}) {
@@ -1694,6 +1702,7 @@ function keyLabel(section) {
 }
 
 function parseNotifications(text) {
+  sessionImageButtonRows = [];
   refreshDynamicStableNames(text);
   const lines = normalizeButtonBlocks(text).split("\n");
   const sections = [];
@@ -2555,6 +2564,13 @@ function makeButtonHtml(version, buttons, options = {}) {
   if ((version === "pc" || version === "pcMb6r" || version === "pcMb3b") && allowImageButtons) {
     const imageEntries = buttons.map((button) => imageButtonEntryFor(version, button, allowImageButtons, imageButtonLanguage));
     if (imageEntries.some(Boolean)) {
+      if (version === "pc") {
+        return buttons
+          .map((button, index) => (imageEntries[index] ? redesignImageAnchor(button, imageEntries[index], index) : ""))
+          .filter(Boolean)
+          .join("\n");
+      }
+
       return buttons.map((button, index) => (
         imageEntries[index]
           ? redesignImageAnchor(button, imageEntries[index], index)
@@ -2562,6 +2578,8 @@ function makeButtonHtml(version, buttons, options = {}) {
       )).join("\n");
     }
   }
+
+  if (version === "pc" && allowImageButtons) return "";
 
   const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
   if (buttons.length > 2 || hasDuplicateColors) {
