@@ -473,8 +473,20 @@ function registerDetectedImageButtonRows(rows) {
 
   sessionImageButtonRows = mergeImageButtonRowsPreservingGroups(sessionImageButtonRows, detectedRows);
 
+  const groupsWithBaseLanguage = new Set();
+  detectedRows.forEach((row) => {
+    const groupKey = `${row.scope || "all"}|${row.group || imageButtonTextKey(row.text)}`;
+    if (row.language === "RUS" || row.language === "ENG") groupsWithBaseLanguage.add(groupKey);
+  });
+
+  const rowsForDictionary = detectedRows.filter((row) => {
+    const groupKey = `${row.scope || "all"}|${row.group || imageButtonTextKey(row.text)}`;
+    return groupsWithBaseLanguage.has(groupKey);
+  });
+  if (!rowsForDictionary.length) return;
+
   const previousRows = imageButtonRows.slice();
-  imageButtonRows = mergeImageButtonRowsPreservingGroups(imageButtonRows, detectedRows);
+  imageButtonRows = mergeImageButtonRowsPreservingGroups(imageButtonRows, rowsForDictionary);
   if (!imageButtonRowsChanged(previousRows, imageButtonRows)) return;
 
   persistImageButtonRows();
@@ -2550,7 +2562,8 @@ function makeButtonHtml(version, buttons, options = {}) {
   const redesignTextAnchor = (button, index = 0) => {
     const isWhite = button.color === "white";
     const margin = index ? "\n\n  " : "";
-    return `${margin}<a href="${button.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin-top: 12px;\n     background-color: ${isWhite ? "transparent" : redesignAccent}; color: ${isWhite ? redesignAccent : "#FFFFFF"}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: ${isWhite ? `2px solid ${redesignAccent}` : "none"};">\n    ${safeText(button.text)}\n  </a>`;
+    const anchorMargin = index ? "12px auto 0" : "0 auto";
+    return `${margin}<a href="${button.url}"\n     style="display: inline-flex; justify-content: center; align-items: center;\n     width: 100%; max-width: 300px; height: 40px;\n     padding: 0 24px; margin: ${anchorMargin};\n     background-color: ${isWhite ? "transparent" : redesignAccent}; color: ${isWhite ? redesignAccent : "#FFFFFF"}; text-decoration: none;\n     font-weight: 600; text-align: center;\n     border-radius: 8px; font-family: Inter, sans-serif; font-size: 14px;\n     box-sizing: border-box; border: ${isWhite ? `2px solid ${redesignAccent}` : "none"};">\n    ${safeText(button.text)}\n  </a>`;
   };
   const redesignImageAnchor = (button, entry, index = 0) => {
     const imageUrl = entry[button.color];
@@ -2566,7 +2579,11 @@ function makeButtonHtml(version, buttons, options = {}) {
     if (imageEntries.some(Boolean)) {
       if (version === "pc") {
         return buttons
-          .map((button, index) => (imageEntries[index] ? redesignImageAnchor(button, imageEntries[index], index) : ""))
+          .map((button, index) => (
+            imageEntries[index]
+              ? redesignImageAnchor(button, imageEntries[index], index)
+              : redesignTextAnchor(button, index)
+          ))
           .filter(Boolean)
           .join("\n");
       }
@@ -2578,8 +2595,6 @@ function makeButtonHtml(version, buttons, options = {}) {
       )).join("\n");
     }
   }
-
-  if (version === "pc" && allowImageButtons) return "";
 
   const hasDuplicateColors = new Set(buttons.map((button) => button.color)).size !== buttons.length;
   if (buttons.length > 2 || hasDuplicateColors) {
