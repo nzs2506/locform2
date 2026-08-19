@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.63</title>
+  <title>LOCform 3.8.64</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.63">
+  <link rel="stylesheet" href="styles.css?v=3.8.64">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.63</h1>
+              <h1>LOCform 3.8.64</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
@@ -135,6 +135,7 @@
       <div class="guide-body">
         <h3>1. Ключи</h3>
         <p>Для заголовка пишите ключ с окончанием <code>.topic</code>, для основного текста — такой же ключ без <code>.topic</code>.</p>
+        <p>Если язык указан рядом с ключом в скобках, например <code>message.service.6312.topic (язык ES)</code>, скрипт воспримет это как языковую пометку и уберёт скобки из текста.</p>
         <pre><code>COM ENG
 message.service.6045.topic
 Day 1 is live!
@@ -172,6 +173,11 @@ Old version
 Узнать больше
 both versions
 (/promotions/promotion/1578?utm_medium=an...)</code></pre>
+        <p>Если в документе после текста кнопки стоит полная ссылка, а следом относительная ссылка, скрипт разложит их так: полная ссылка пойдёт в Web/Mobile, относительная — в Redesign.</p>
+        <pre><code>Зеленая кнопка:
+Obtener tu bono https://go2m.biz/...url_web=ar/promotions/promotion/1632...
+both versions
+(/promotions/promotion/1632?utm_medium=an...)</code></pre>
         <p>Если кнопок несколько, лучше писать их подряд одним блоком, без обычного текста между ними.</p>
         <pre><code>Зеленая кнопка: Получить бонус (/account/deposit)
 Белая кнопка: Узнать больше (/promotions/promotion/411)</code></pre>
@@ -293,6 +299,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.63"></script>
+  <script src="app.js?v=3.8.64"></script>
 </body>
 </html>

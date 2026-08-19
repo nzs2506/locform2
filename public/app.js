@@ -161,9 +161,18 @@ function visibleUrlText(value) {
   return cleanButtonUrlCandidate(cleanLabel);
 }
 
+function visibleUrlFragmentText(value) {
+  const cleanLabel = String(value || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").trim();
+  if (!cleanLabel || /\s/u.test(cleanLabel)) return "";
+  return /(?:^|[?&])[\w.-]+=/.test(cleanLabel) || /&[\w.-]+=/.test(cleanLabel) ? cleanLabel : "";
+}
+
 function inlineLinkHtml(href, label) {
   const labelUrl = visibleUrlText(label);
   if (labelUrl) return labelUrl;
+
+  const labelUrlFragment = visibleUrlFragmentText(label);
+  if (labelUrlFragment) return labelUrlFragment;
 
   const safeHref = absoluteInlineHref(href).replace(/"/g, "%22");
   const cleanLabel = String(label || "").replace(/<[^>]+>/g, "").trim();
@@ -662,7 +671,7 @@ function plainOutputText(value) {
 function normalizeInputText(value) {
   const siteWords = "(?:both\\s*versions|bothversions|обе\\s*версии|old\\s*site|oldsite|old\\s*version|oldversion|старый\\s*сайт|redesign\\s*site|redesignsite|redesign|new\\s*site|newsite|new\\s*version|newversion|редизайн|новый\\s*сайт)";
   const buttonWords = "(?:Кнопка\\s*зел[её]ная|Зел[её]ная\\s*кнопка|Button\\s*green|Green\\s*button|Кнопка\\s*белая|Белая\\s*кнопка|Button\\s*white|White\\s*button)";
-  return String(value || "")
+  return normalizeAnnotatedServiceKeys(value)
     .replace(/\r\n?/g, "\n")
     .replace(/&amp;/g, "&")
     .replace(/(^|\n)\s*old\s*(?=\n|$)/giu, "$1Old version")
@@ -882,6 +891,26 @@ function stripImageGalleryUrlsFromText(value) {
     .trim();
 }
 
+function stripActionUrlsFromText(value) {
+  let text = stripImageGalleryUrlsFromText(value).replace(/&amp;/g, "&");
+  matchedActionUrls(text).forEach((url) => {
+    text = text.replace(new RegExp(`\\s*\\(?\\s*${escapeRegExp(url)}\\s*\\)?\\s*`, "gu"), " ");
+  });
+
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function buttonTextAndActionUrls(value) {
+  return {
+    text: stripActionUrlsFromText(value),
+    urls: matchedActionUrls(value),
+  };
+}
+
+function isRelativeActionUrl(url) {
+  return /^\//u.test(String(url || "").trim());
+}
+
 function knownImageButtonGroupLabel(text) {
   return pcImageButtonGroupByText.get(imageButtonTextKey(text))?.label || "";
 }
@@ -982,9 +1011,75 @@ function normalizeButtonBlocks(value) {
     return matchedActionUrls(value);
   }
 
+  function pushVariantButton(label, buttonText, marker, url) {
+    out.push(siteOutputLabel(marker));
+    pushExpandedButton(label, buttonText, url);
+  }
+
+  function consumeButtonVariantsAfterLabel(label, labelIndex) {
+    if (labelIndex >= lines.length) return null;
+
+    const labelParts = buttonTextAndActionUrls(lines[labelIndex]);
+    if (!labelParts.text) return null;
+
+    const variants = [];
+    let cursor = labelIndex + 1;
+    let sawSiteMarker = false;
+
+    function addVariant(marker, url) {
+      const clean = cleanButtonUrlCandidate(url) || cleanUrl(url);
+      if (!clean || isImageGalleryUrl(clean)) return;
+      if (variants.some((variant) => variant.marker === marker && variant.url === clean)) return;
+      variants.push({ marker, url: clean });
+    }
+
+    labelParts.urls.forEach((url) => addVariant(isRelativeActionUrl(url) ? "redesign" : "old", url));
+
+    while (cursor < lines.length) {
+      while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
+      if (cursor >= lines.length) break;
+
+      const site = splitSitePrefix(lines[cursor] || "");
+      if (site) {
+        sawSiteMarker = true;
+        let urls = splitMultipleUrls(site.rest);
+        let consumedLines = 1;
+
+        if (!urls.length) {
+          let urlIndex = cursor + 1;
+          while (urlIndex < lines.length && !stripTags(lines[urlIndex])) urlIndex += 1;
+          urls = splitMultipleUrls(stripTags(lines[urlIndex] || ""));
+          if (urls.length) consumedLines = urlIndex - cursor + 1;
+        }
+
+        if (!urls.length) break;
+
+        urls.forEach((url) => {
+          const marker = site.marker === "both" && variants.some((variant) => variant.marker === "old") && isRelativeActionUrl(url)
+            ? "redesign"
+            : site.marker;
+          addVariant(marker, url);
+        });
+        cursor += consumedLines;
+        continue;
+      }
+
+      const urls = splitMultipleUrls(stripTags(lines[cursor] || ""));
+      if (!urls.length) break;
+      urls.forEach((url) => addVariant(isRelativeActionUrl(url) ? "redesign" : "old", url));
+      cursor += 1;
+    }
+
+    if (!sawSiteMarker && variants.length < 2) return null;
+    if (!variants.length) return null;
+
+    variants.forEach((variant) => pushVariantButton(label, labelParts.text, variant.marker, variant.url));
+    return cursor;
+  }
+
   function pushExpandedButton(label, text, url) {
     out.push(`${label}:`);
-    out.push(stripImageGalleryUrlsFromText(text));
+    out.push(stripActionUrlsFromText(text));
     out.push(`(${cleanButtonUrlCandidate(url) || cleanUrl(url)})`);
   }
 
@@ -1144,15 +1239,21 @@ function normalizeButtonBlocks(value) {
 
       if (labelLine && site?.marker === "redesign" && urls.length >= 2) {
         out.push("redesign");
-        pushExpandedButton(plain, stripImageGalleryUrlsFromText(labelLine), urls[0]);
+        pushExpandedButton(plain, stripActionUrlsFromText(labelLine), urls[0]);
         out.push("Old version");
-        pushExpandedButton(plain, stripImageGalleryUrlsFromText(labelLine), urls[1]);
+        pushExpandedButton(plain, stripActionUrlsFromText(labelLine), urls[1]);
         index += 4;
         continue;
       }
 
       if (labelLine) {
-        const consumed = pushLabeledSiteButtons(plain, stripImageGalleryUrlsFromText(labelLine), index + 2);
+        const consumedVariants = consumeButtonVariantsAfterLabel(plain, index + 1);
+        if (consumedVariants !== null) {
+          index = consumedVariants;
+          continue;
+        }
+
+        const consumed = pushLabeledSiteButtons(plain, stripActionUrlsFromText(labelLine), index + 2);
         if (consumed !== null) {
           index = consumed;
           continue;
@@ -1224,7 +1325,13 @@ function normalizeButtonBlocks(value) {
         continue;
       }
 
-      const labelText = stripImageGalleryUrlsFromText(lines[next]);
+      const consumedVariants = consumeButtonVariantsAfterLabel(label, next);
+      if (consumedVariants !== null) {
+        index = consumedVariants;
+        continue;
+      }
+
+      const labelText = stripActionUrlsFromText(lines[next]);
       if (labelText && !splitSitePrefix(lines[next])) {
         const consumed = pushLabeledSiteButtons(label, labelText, next + 1);
         if (consumed !== null) {
@@ -1279,7 +1386,7 @@ function normalizeButtonBlocks(value) {
     if (rest && next < lines.length) {
       const url = stripTags(lines[next]);
       if (/^\(?((?:https?:\/\/|\/)[^)]+)\)?$/iu.test(url) && !isImageGalleryUrl(url)) {
-        out.push(`${label}: ${stripImageGalleryUrlsFromText(rest)} (${cleanUrl(url)})`);
+        out.push(`${label}: ${stripActionUrlsFromText(rest)} (${cleanUrl(url)})`);
         index = next + 1;
         continue;
       }
@@ -1456,15 +1563,37 @@ function isLineBreakInstruction(line) {
   return /^\u041c\u0435\u0436(?:\u0434\u0443)?\u0441\u0442\u0440\u043e\u0447\u043d\u044b\u0439\s+(?:\u0438\u043d\u0442\u0435\u0440\u0432\u0430\u043b|\u043f\u0440\u043e\u0431\u0435\u043b)$/iu.test(plainOutputText(line));
 }
 
+function serviceKeyLanguageCode(value) {
+  const code = String(value || "").trim().toUpperCase();
+  return normalizeImageButtonLanguage(code) || code;
+}
+
+function normalizeAnnotatedServiceKeys(value) {
+  return String(value || "").replace(
+    /(?:<b>)?\s*(message\.service(?:\.[a-z0-9_-]+)*\.\d+(?:\.topic)?)\s*(?:\(\s*(?:язык|lang(?:uage)?)\s*[:=]?\s*([a-z]{2,10})\s*\))\s*(?:<\/b>)?/giu,
+    (_, key, language) => `\n${serviceKeyLanguageCode(language)}\n${key}\n`,
+  );
+}
+
 function serviceKeyBase(key) {
   return key.replace(/\.topic$/i, "");
 }
 
 function languageHeader(line) {
   const plain = stripTags(line).replace(/\s+/g, " ").trim();
-  const match = plain.match(/^(?:PC|COM|MOB|WEB|APP|AN)?\s*(ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|AR|ARG|LATAM|LAT|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b/i);
+  const match = plain.match(/^(?:(PC|COM|MOB|WEB|APP|AN)\s+)?(ES_LATAM|ESLATAM|ENG|EN|RUS|RU|UZB|UZ|KAZ|KZ|SPA|ESP|ES|AR|ARG|LATAM|LAT|POR|PT|FRA|FR|GER|DE|TUR|TR|AZE|AZ|ARM|AM|GEO|KA|UKR|UA)\b(.*)$/i);
   if (!match) return "";
-  return match[1].toUpperCase();
+
+  const [, platformPrefix, code, rest = ""] = match;
+  const codeIsUppercase = code === code.toUpperCase();
+  const headerRest = rest.trim();
+  const normalizedHeaderRest = headerRest.replace(/[-—–:|/(),]+/g, " ").replace(/\s+/g, " ").trim();
+  const restLooksLikeHeader = !normalizedHeaderRest || /^(?:OLD|NEW|VERSION|SITE|MOBILE|MOB|WEB|APP|PC|MB6R|MB3B|LATAM)(?:\s+(?:OLD|NEW|VERSION|SITE|MOBILE|MOB|WEB|APP|PC|MB6R|MB3B|LATAM))*$/i.test(normalizedHeaderRest);
+
+  if (!platformPrefix && !codeIsUppercase) return "";
+  if (!restLooksLikeHeader) return "";
+
+  return normalizeImageButtonLanguage(code) || code.toUpperCase();
 }
 
 function separateLanguageHeaders(value) {
@@ -2302,6 +2431,8 @@ function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
     .replace(/<\/p>/gi, "\n")
     .replace(/<p[^>]*>/gi, "")
     .replace(/<(?!\/?(?:b|i|u|a)\b)[^>]+>/gi, "");
+
+  text = normalizeAnnotatedServiceKeys(text);
 
   text = text
     .replace(/(?:<b>)?(message\.service(?:\.[a-z]{2,5})?\.\d+\.topic)(?:<\/b>)?/gi, "\n$1\n")
