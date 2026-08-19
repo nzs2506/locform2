@@ -2578,7 +2578,7 @@ function makeButtonHtml(version, buttons, options = {}) {
     const imageEntries = buttons.map((button) => imageButtonEntryFor(version, button, allowImageButtons, imageButtonLanguage));
     if (imageEntries.some(Boolean)) {
       if (version === "pc") {
-        return buttons
+        const renderedButtons = buttons
           .map((button, index) => (
             imageEntries[index]
               ? redesignImageAnchor(button, imageEntries[index], index)
@@ -2586,6 +2586,12 @@ function makeButtonHtml(version, buttons, options = {}) {
           ))
           .filter(Boolean)
           .join("\n");
+
+        // A mixed group must remain vertical: image anchors are block elements,
+        // while fallback redesign anchors are inline-flex.
+        return buttons.length > 1
+          ? `<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">\n\n${renderedButtons}\n\n</div>`
+          : renderedButtons;
       }
 
       return buttons.map((button, index) => (
