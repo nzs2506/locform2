@@ -798,6 +798,33 @@ function splitSitePrefixLoose(line) {
   };
 }
 
+function splitTrailingSiteMarker(line) {
+  const plain = stripTagsWithSpaces(line);
+  const aliases = [
+    ["both\\s*versions", "both"],
+    ["bothversions", "both"],
+    ["обе\\s*версии", "both"],
+    ["redesign\\s*site", "redesign"],
+    ["redesignsite", "redesign"],
+    ["new\\s*version", "redesign"],
+    ["newversion", "redesign"],
+    ["new\\s*site", "redesign"],
+    ["newsite", "redesign"],
+    ["redesign", "redesign"],
+    ["old\\s*version", "old"],
+    ["oldversion", "old"],
+    ["old\\s*site", "old"],
+    ["oldsite", "old"],
+  ];
+
+  for (const [alias, marker] of aliases) {
+    const match = plain.match(new RegExp(`\\s+(${alias})\\s*:?\\s*$`, "iu"));
+    if (match) return { marker, before: plain.slice(0, match.index).trim() };
+  }
+
+  return null;
+}
+
 function matchedUrls(value) {
   const direct = cleanButtonUrlCandidate(value);
   const urls = findUrlMatches(value).map((match) => match.url);
@@ -1019,7 +1046,8 @@ function normalizeButtonBlocks(value) {
   function consumeButtonVariantsAfterLabel(label, labelIndex) {
     if (labelIndex >= lines.length) return null;
 
-    const labelParts = buttonTextAndActionUrls(lines[labelIndex]);
+    const labelTrailingSite = splitTrailingSiteMarker(lines[labelIndex]);
+    const labelParts = buttonTextAndActionUrls(labelTrailingSite?.before || lines[labelIndex]);
     if (!labelParts.text) return null;
 
     const variants = [];
@@ -1033,11 +1061,38 @@ function normalizeButtonBlocks(value) {
       variants.push({ marker, url: clean });
     }
 
+    function urlsFromNextLineOrFallback(startIndex, fallbackValue) {
+      let urlIndex = startIndex;
+      while (urlIndex < lines.length && !stripTags(lines[urlIndex])) urlIndex += 1;
+      const nextUrls = splitMultipleUrls(stripTags(lines[urlIndex] || ""));
+      if (nextUrls.length) return { urls: nextUrls, nextIndex: urlIndex + 1 };
+
+      return { urls: splitMultipleUrls(fallbackValue || ""), nextIndex: startIndex };
+    }
+
+    if (labelTrailingSite) {
+      const resolved = urlsFromNextLineOrFallback(cursor, labelTrailingSite.before);
+      resolved.urls.forEach((url) => addVariant(labelTrailingSite.marker, url));
+      if (!variants.length) return null;
+      variants.forEach((variant) => pushVariantButton(label, labelParts.text, variant.marker, variant.url));
+      return resolved.nextIndex;
+    }
+
     labelParts.urls.forEach((url) => addVariant(isRelativeActionUrl(url) ? "redesign" : "old", url));
 
     while (cursor < lines.length) {
       while (cursor < lines.length && !stripTags(lines[cursor])) cursor += 1;
       if (cursor >= lines.length) break;
+
+      const trailingSite = splitTrailingSiteMarker(lines[cursor] || "");
+      if (trailingSite) {
+        sawSiteMarker = true;
+        const resolved = urlsFromNextLineOrFallback(cursor + 1, trailingSite.before);
+        if (!resolved.urls.length) break;
+        resolved.urls.forEach((url) => addVariant(trailingSite.marker, url));
+        cursor = resolved.nextIndex;
+        continue;
+      }
 
       const site = splitSitePrefix(lines[cursor] || "");
       if (site) {
@@ -2390,26 +2445,46 @@ function inlineLinkPattern(label) {
   return new RegExp(parts.join("[\\s\\u00a0]+"), "gu");
 }
 
+function shouldApplyInlineLinkHint(hint) {
+  const text = plainOutputText(hint?.text || "");
+  if (!text) return false;
+  if (/^\d+$/u.test(text)) return false;
+  if (/[?&=]/u.test(text)) return false;
+  if (visibleUrlText(text) || visibleUrlFragmentText(text)) return false;
+  return true;
+}
+
+function lineContainsActionUrl(value) {
+  const plain = stripTagsWithSpaces(value).replace(/&amp;/g, "&");
+  return matchedActionUrls(plain).length > 0 || /(?:^|[\s(])\/[^\s)]+/u.test(plain);
+}
+
+function applyInlineLinkHintToChunk(chunk, hint) {
+  const pattern = inlineLinkPattern(hint.text);
+  if (!pattern) return chunk;
+  return chunk.replace(pattern, (match) => inlineLinkHtml(hint.href, match));
+}
+
 function applyDocxInlineLinkHints(text, hints = []) {
   if (!hints.length) return text;
 
+  const usableHints = hints.filter(shouldApplyInlineLinkHint);
+  if (!usableHints.length) return text;
+
   return String(text || "").split("\n").map((line) => {
-    const chunks = line.split(/(<a href="[^"]+"(?: target="_blank")?>[\s\S]*?<\/a>)/g);
+    if (lineContainsActionUrl(line)) return line;
 
-    return chunks.map((chunk) => {
-      if (/^<a href=/.test(chunk)) return chunk;
-
-      return hints
-        .slice()
-        .sort((a, b) => b.text.length - a.text.length)
-        .reduce((value, hint) => {
-          const pattern = inlineLinkPattern(hint.text);
-          if (!pattern) return value;
-          return value.replace(pattern, (match) => inlineLinkHtml(hint.href, match));
-        }, chunk);
-    }).join("");
+    return usableHints
+      .slice()
+      .sort((a, b) => b.text.length - a.text.length)
+      .reduce((value, hint) => (
+        value.split(/(<a href="[^"]+"(?: target="_blank")?>[\s\S]*?<\/a>)/g)
+          .map((chunk) => (/^<a href=/.test(chunk) ? chunk : applyInlineLinkHintToChunk(chunk, hint)))
+          .join("")
+      ), line);
   }).join("\n");
 }
+
 
 function normalizeDocxHtml(html, highlightHints = [], inlineLinkHints = []) {
   let text = String(html || "");
