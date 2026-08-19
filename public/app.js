@@ -1073,6 +1073,7 @@ function normalizeButtonBlocks(value) {
     const variants = [];
     let cursor = labelIndex + 1;
     let sawSiteMarker = false;
+    const inlineActionUrl = labelParts.urls.find((url) => !isImageGalleryUrl(url)) || "";
 
     function addVariant(marker, url) {
       const clean = cleanButtonUrlCandidate(url) || cleanUrl(url);
@@ -1128,6 +1129,19 @@ function normalizeButtonBlocks(value) {
         }
 
         if (!urls.length) break;
+
+        // "Both versions" keeps the action URL written next to the button text.
+        // The following relative URL only marks the target as shared; it must not
+        // replace the explicit button URL with a redesign-only path.
+        if (site.marker === "both" && inlineActionUrl) {
+          const oldVariantIndex = variants.findIndex((variant) => (
+            variant.marker === "old" && variant.url === inlineActionUrl
+          ));
+          if (oldVariantIndex !== -1) variants.splice(oldVariantIndex, 1);
+          addVariant("both", inlineActionUrl);
+          cursor += consumedLines;
+          continue;
+        }
 
         urls.forEach((url) => {
           const marker = site.marker === "both" && variants.some((variant) => variant.marker === "old") && isRelativeActionUrl(url)
