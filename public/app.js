@@ -152,8 +152,8 @@ function restoreAllowedTags(value) {
 function absoluteInlineHref(href) {
   const value = String(href || "").replace(/&amp;/g, "&").trim();
   if (/^https?:\/\//i.test(value)) return value;
-  if (/^\/casino\/categories\//i.test(value)) return `https://new.marathonbet.com/es${value}`;
-  if (value.startsWith("/")) return `https://new.marathonbet.com${value}`;
+  if (/^\/casino\/categories\//i.test(value)) return `https://www.marathonbet.com/es${value}`;
+  if (value.startsWith("/")) return `https://www.marathonbet.com${value}`;
   return value;
 }
 
