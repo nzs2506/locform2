@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.72</title>
+  <title>LOCform 3.8.73</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.72">
+  <link rel="stylesheet" href="styles.css?v=3.8.73">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,20 +27,26 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.72</h1>
+              <h1>LOCform 3.8.73</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
           </div>
           <div class="pane-actions">
             <button id="imageButtonsBtn" class="image-buttons-button" type="button" aria-haspopup="dialog" aria-controls="imageButtonsModal" title="Картинки для redesign">Картинки</button>
+            <button id="chooseFilesBtn" class="choose-files-button" type="button">Файлы</button>
+            <input id="sourceFilesInput" type="file" accept=".docx,.txt,.html,.htm" multiple hidden>
             <button id="convertBtn" type="button">Преобразовать</button>
           </div>
         </div>
 
+        <div id="sourceFileBar" class="source-file-bar" hidden>
+          <div id="sourceFileTabs" class="source-file-tabs" aria-label="Загруженные файлы"></div>
+        </div>
+
         <div class="textarea-wrap">
           <textarea id="sourceText" spellcheck="false" placeholder="Вставьте текст CRM/промо или перетащите сюда .docx/.txt/.html файл"></textarea>
-          <div class="drop-hint">Отпустите .docx, .txt или .html файл здесь</div>
+          <div class="drop-hint">Отпустите .docx, .txt или .html файлы здесь</div>
         </div>
 
         <div class="options">
@@ -133,6 +139,7 @@
         <button id="guideCloseBtn" class="guide-close" type="button" aria-label="Закрыть">×</button>
       </div>
       <div class="guide-body">
+        <p>Несколько файлов можно выбрать кнопкой <code>Файлы</code> или перетащить одновременно в левую часть экрана. При двух и более файлах появятся вкладки: каждый файл хранит свой исходник и результат отдельно.</p>
         <h3>1. Ключи</h3>
         <p>Для заголовка пишите ключ с окончанием <code>.topic</code>, для основного текста — такой же ключ без <code>.topic</code>.</p>
         <p>Если язык указан рядом с ключом в скобках, например <code>message.service.6312.topic (язык ES)</code>, скрипт воспримет это как языковую пометку и уберёт скобки из текста.</p>
@@ -306,6 +313,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.72"></script>
+  <script src="app.js?v=3.8.73"></script>
 </body>
 </html>

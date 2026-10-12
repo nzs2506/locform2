@@ -71,7 +71,7 @@ button:hover {
 
 .editor-pane {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   position: relative;
 }
 
@@ -132,6 +132,14 @@ h1 {
   font-weight: 700;
 }
 
+.choose-files-button {
+  min-height: 26px;
+  padding: 0 10px;
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .pane-actions {
   display: flex;
   align-items: center;
@@ -162,6 +170,60 @@ h2 {
 .textarea-wrap {
   position: relative;
   min-height: 0;
+}
+
+.source-file-bar {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fcfcfa;
+}
+
+.source-file-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.source-file-tab {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.source-file-select,
+.source-file-remove {
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.source-file-select {
+  max-width: 180px;
+  overflow: hidden;
+  padding: 0 10px;
+  border-radius: 5px 0 0 5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-file-select.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.source-file-remove {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  border-left: 0;
+  border-radius: 0 5px 5px 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.source-file-select.active + .source-file-remove {
+  border-color: var(--green);
 }
 
 textarea {

@@ -4,6 +4,10 @@ const autoConvert = document.querySelector("#autoConvert");
 const keepLists = document.querySelector("#keepLists");
 const keepTables = document.querySelector("#keepTables");
 const dropZone = document.querySelector("#dropZone");
+const chooseFilesBtn = document.querySelector("#chooseFilesBtn");
+const sourceFilesInput = document.querySelector("#sourceFilesInput");
+const sourceFileBar = document.querySelector("#sourceFileBar");
+const sourceFileTabs = document.querySelector("#sourceFileTabs");
 const outputs = {
   topic: document.querySelector("#topicOutput"),
   compact: document.querySelector("#compactOutput"),
@@ -38,7 +42,10 @@ const authPassword = document.querySelector("#authPassword");
 const authError = document.querySelector("#authError");
 let parsedNotifications = [];
 let activeNotificationIndex = 0;
+let sourceDocuments = [];
+let activeSourceDocumentIndex = -1;
 let activeImageButtonScope = "pc";
+const defaultSourceText = "Вот сюда добавьте какой-то текст, вы же не просто так сюда пришли";
 const accessPassword = "0558";
 const accessSessionKey = "locform-auth-ok";
 const imageButtonsStorageKey = "locform-redesign-image-buttons-v2";
@@ -2939,8 +2946,75 @@ function previewHtml(html) {
     .replace(/\n{2,}/g, "\n");
 }
 
+function syncActiveSourceDocument() {
+  const sourceDocument = sourceDocuments[activeSourceDocumentIndex];
+  if (sourceDocument) sourceDocument.value = sourceText.value;
+}
+
+function renderSourceFileTabs() {
+  sourceFileBar.hidden = sourceDocuments.length < 2;
+  sourceFileTabs.innerHTML = "";
+
+  sourceDocuments.forEach((sourceDocument, index) => {
+    const item = document.createElement("div");
+    item.className = "source-file-tab";
+
+    const select = document.createElement("button");
+    select.type = "button";
+    select.className = "source-file-select";
+    select.dataset.sourceIndex = String(index);
+    select.textContent = sourceDocument.name;
+    select.title = sourceDocument.name;
+    if (index === activeSourceDocumentIndex) select.classList.add("active");
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "source-file-remove";
+    remove.dataset.removeSourceIndex = String(index);
+    remove.setAttribute("aria-label", `Убрать ${sourceDocument.name}`);
+    remove.title = `Убрать ${sourceDocument.name}`;
+    remove.textContent = "×";
+
+    item.append(select, remove);
+    sourceFileTabs.append(item);
+  });
+}
+
+function activateSourceDocument(index) {
+  if (!sourceDocuments[index]) return;
+  syncActiveSourceDocument();
+  activeSourceDocumentIndex = index;
+  sourceText.value = sourceDocuments[index].value;
+  renderSourceFileTabs();
+  convert();
+}
+
+function removeSourceDocument(index) {
+  if (!sourceDocuments[index]) return;
+  const removingActiveDocument = index === activeSourceDocumentIndex;
+  sourceDocuments.splice(index, 1);
+
+  if (!sourceDocuments.length) {
+    activeSourceDocumentIndex = -1;
+    sourceText.value = defaultSourceText;
+    renderSourceFileTabs();
+    convert();
+    return;
+  }
+
+  if (index < activeSourceDocumentIndex) activeSourceDocumentIndex -= 1;
+  if (removingActiveDocument) {
+    activeSourceDocumentIndex = Math.min(index, sourceDocuments.length - 1);
+    sourceText.value = sourceDocuments[activeSourceDocumentIndex].value;
+    convert();
+  }
+
+  renderSourceFileTabs();
+}
+
 function setSourceText(value) {
   sourceText.value = value;
+  syncActiveSourceDocument();
   if (autoConvert.checked) convert();
 }
 
@@ -2948,14 +3022,14 @@ function appendSourceText(value) {
   const start = sourceText.selectionStart ?? sourceText.value.length;
   const end = sourceText.selectionEnd ?? sourceText.value.length;
   sourceText.setRangeText(value, start, end, "end");
+  syncActiveSourceDocument();
   if (autoConvert.checked) convert();
 }
 
-async function readDroppedFile(file) {
+async function readSourceFileContent(file) {
   if (/\.docx$/i.test(file.name)) {
     if (typeof mammoth === "undefined") {
-      window.alert("Не удалось загрузить .docx: Mammoth.js недоступен.");
-      return;
+      throw new Error("Mammoth.js недоступен");
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -2964,16 +3038,41 @@ async function readDroppedFile(file) {
       extractDocxInlineLinkHints(arrayBuffer.slice(0)).catch(() => []),
       mammoth.convertToHtml({ arrayBuffer: arrayBuffer.slice(0) }),
     ]);
-    setSourceText(normalizeDocxHtml(result.value, highlightHints, inlineLinkHints));
+    return normalizeDocxHtml(result.value, highlightHints, inlineLinkHints);
+  }
+
+  const raw = await file.text();
+  return /\.html?$/i.test(file.name) ? htmlPasteToPlainText(raw) : raw;
+}
+
+async function importSourceFiles(files) {
+  const supportedFiles = Array.from(files || []).filter((file) => /\.(?:docx|txt|html?)$/i.test(file.name));
+  if (!supportedFiles.length) {
+    window.alert("Выберите файлы .docx, .txt или .html.");
     return;
   }
 
-  const reader = new FileReader();
-  reader.addEventListener("load", () => {
-    const raw = String(reader.result || "");
-    setSourceText(/\.html?$/i.test(file.name) ? htmlPasteToPlainText(raw) : raw);
-  });
-  reader.readAsText(file);
+  syncActiveSourceDocument();
+  if (!sourceDocuments.length && sourceText.value.trim() && sourceText.value !== defaultSourceText) {
+    sourceDocuments.push({ name: "Текст", value: sourceText.value });
+    activeSourceDocumentIndex = 0;
+  }
+
+  const loaded = await Promise.allSettled(supportedFiles.map(async (file) => ({
+    name: file.name,
+    value: await readSourceFileContent(file),
+  })));
+  const imported = loaded.filter((result) => result.status === "fulfilled").map((result) => result.value);
+  const failed = loaded.filter((result) => result.status === "rejected");
+
+  if (imported.length) {
+    sourceDocuments.push(...imported);
+    activateSourceDocument(sourceDocuments.length - imported.length);
+  }
+
+  if (failed.length) {
+    window.alert(`Не удалось прочитать файлов: ${failed.length}.`);
+  }
 }
 
 document.querySelectorAll(".tab").forEach((tab) => {
@@ -3135,6 +3234,23 @@ authForm.addEventListener("submit", (event) => {
 });
 
 convertBtn.addEventListener("click", convert);
+chooseFilesBtn.addEventListener("click", () => sourceFilesInput.click());
+sourceFilesInput.addEventListener("change", () => {
+  importSourceFiles(sourceFilesInput.files).catch((error) => {
+    window.alert(`Не удалось прочитать файлы: ${error.message}`);
+  });
+  sourceFilesInput.value = "";
+});
+sourceFileTabs.addEventListener("click", (event) => {
+  const remove = event.target.closest("[data-remove-source-index]");
+  if (remove) {
+    removeSourceDocument(Number(remove.dataset.removeSourceIndex));
+    return;
+  }
+
+  const select = event.target.closest("[data-source-index]");
+  if (select) activateSourceDocument(Number(select.dataset.sourceIndex));
+});
 sourceText.addEventListener("paste", (event) => {
   const html = event.clipboardData?.getData("text/html");
   if (!html) return;
@@ -3146,6 +3262,7 @@ sourceText.addEventListener("paste", (event) => {
   const start = sourceText.selectionStart;
   const end = sourceText.selectionEnd;
   sourceText.setRangeText(markedText, start, end, "end");
+  syncActiveSourceDocument();
   if (autoConvert.checked) convert();
 });
 ["dragenter", "dragover"].forEach((eventName) => {
@@ -3162,10 +3279,10 @@ sourceText.addEventListener("paste", (event) => {
 dropZone.addEventListener("drop", (event) => {
   event.preventDefault();
 
-  const file = event.dataTransfer?.files?.[0];
-  if (file) {
-    readDroppedFile(file).catch((error) => {
-      window.alert(`Не удалось прочитать файл: ${error.message}`);
+  const files = event.dataTransfer?.files;
+  if (files?.length) {
+    importSourceFiles(files).catch((error) => {
+      window.alert(`Не удалось прочитать файлы: ${error.message}`);
     });
     return;
   }
@@ -3175,6 +3292,7 @@ dropZone.addEventListener("drop", (event) => {
   if (text) appendSourceText(text);
 });
 sourceText.addEventListener("input", () => {
+  syncActiveSourceDocument();
   if (autoConvert.checked) convert();
 });
 keepLists.addEventListener("change", convert);
@@ -3183,7 +3301,7 @@ Object.values(outputs).forEach((output) => {
   output.addEventListener("input", updatePreview);
 });
 
-sourceText.value = "Вот сюда добавьте какой-то текст, вы же не просто так сюда пришли";
+sourceText.value = defaultSourceText;
 convert();
 initializeAccess();
 loadSharedImageButtons({ silent: true });
