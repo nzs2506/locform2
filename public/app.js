@@ -17,6 +17,9 @@ const outputs = {
   pcMb3b: document.querySelector("#pcMb3bOutput"),
 };
 const keyTabs = document.querySelector("#keyTabs");
+const warningsBtn = document.querySelector("#warningsBtn");
+const warningsCount = document.querySelector("#warningsCount");
+const warningsPanel = document.querySelector("#warningsPanel");
 const copyKeyBtn = document.querySelector("#copyKeyBtn");
 const copyTopicKeyBtn = document.querySelector("#copyTopicKeyBtn");
 const guideBtn = document.querySelector("#guideBtn");
@@ -44,6 +47,7 @@ let parsedNotifications = [];
 let activeNotificationIndex = 0;
 let sourceDocuments = [];
 let activeSourceDocumentIndex = -1;
+let sourceWarnings = [];
 let activeImageButtonScope = "pc";
 const defaultSourceText = "Вот сюда добавьте какой-то текст, вы же не просто так сюда пришли";
 const accessPassword = "0558";
@@ -2892,6 +2896,113 @@ function renderKeyTabs() {
   copyTopicKeyBtn.disabled = false;
 }
 
+function lintSource(value, fileIndex) {
+  const lines = String(value || "").split("\n");
+  const warnings = [];
+  const topics = new Map();
+  const bodies = [];
+  let language = "";
+  let current = null;
+  let button = null;
+  let pendingTopic = null;
+
+  function warn(line, message, record = current) {
+    warnings.push({ fileIndex, line, message, key: record?.key || "", language: record?.language || language, keyOccurrence: record?.occurrence ?? -1 });
+  }
+  function finishButton() {
+    if (!button) return;
+    const record = current;
+    if (!button.old && !button.redesign) warn(button.line, "У кнопки нет action-ссылки после Old version, Redesign или Both versions.", record);
+    else if (!button.old || !button.redesign) warn(button.line, "Ссылка указана только для одной версии кнопки.", record);
+    button = null;
+  }
+  function finishBody() {
+    finishButton();
+    if (!current) return;
+    if (!current.content) warn(current.line, "У ключа нет текста body.");
+    if (current.content && !current.age) warn(current.line, "В body не найдена строка 18+.");
+    bodies.push(current);
+    current = null;
+  }
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const plain = stripTagsWithSpaces(lines[index]).trim();
+    const nextLanguage = languageHeader(lines[index]);
+    if (nextLanguage) {
+      finishBody();
+      language = nextLanguage;
+      continue;
+    }
+    if (isServiceKeyLine(lines[index])) {
+      finishBody();
+      if (/\.topic$/i.test(plain)) {
+        pendingTopic = { key: serviceKeyBase(plain), language, line: index + 1 };
+      } else {
+        const occurrence = bodies.filter((item) => item.key === plain).length;
+        current = { key: plain, language, line: index + 1, occurrence, content: false, age: false };
+        if (!language) warn(index + 1, "У ключа не указан язык.");
+      }
+      continue;
+    }
+    if (pendingTopic && plain) {
+      const id = `${pendingTopic.language}|${pendingTopic.key}`;
+      if (!topics.has(id)) topics.set(id, pendingTopic);
+      pendingTopic = null;
+      continue;
+    }
+    if (!current || !plain) continue;
+    if (startsWithAgeWarning(lines[index])) current.age = true;
+    if (!isLineBreakInstruction(lines[index]) && !/неразрывные\s+пробелы/iu.test(plain) && !isDiscardedServiceLabel(lines[index])) current.content = true;
+
+    if (matchButtonMarker(lines[index])) {
+      finishButton();
+      button = { line: index + 1, old: false, redesign: false };
+      continue;
+    }
+    if (!button) continue;
+    const site = splitSitePrefixLoose(lines[index]);
+    if (!site) continue;
+    let action = matchedActionUrls(site.rest)[0];
+    if (!action) {
+      let next = index + 1;
+      while (next < lines.length && !stripTagsWithSpaces(lines[next]).trim()) next += 1;
+      if (next < lines.length && !isServiceKeyLine(lines[next]) && !matchButtonMarker(lines[next]) && !splitSitePrefixLoose(lines[next])) {
+        action = matchedActionUrls(stripTagsWithSpaces(lines[next]))[0];
+      }
+    }
+    if (!action) {
+      warn(index + 1, `После ${site.marker === "old" ? "Old version" : site.marker === "both" ? "Both versions" : "Redesign"} нет action-ссылки.`);
+      continue;
+    }
+    if (site.marker === "old" || site.marker === "both") button.old = true;
+    if (site.marker === "redesign" || site.marker === "both") button.redesign = true;
+    if (/^http:\/\//i.test(action)) warn(index + 1, "Action-ссылка использует http:// вместо https://.");
+    if (/\s/.test(action)) warn(index + 1, "В action-ссылке есть пробелы.");
+  }
+  finishBody();
+  for (const topic of topics.values()) {
+    if (!bodies.some((body) => body.key === topic.key && (!topic.language || body.language === topic.language))) {
+      warn(topic.line, "У topic нет соответствующего body.", topic);
+    }
+  }
+  for (const body of bodies) {
+    if (!topics.has(`${body.language}|${body.key}`) && !topics.has(`|${body.key}`)) {
+      warn(body.line, "У body нет соответствующего topic.", body);
+    }
+  }
+  return warnings;
+}
+
+function renderWarnings() {
+  const documents = sourceDocuments.length ? sourceDocuments : [{ name: "Текст", value: sourceText.value }];
+  sourceWarnings = documents.flatMap((item, index) => lintSource(item.value, index));
+  warningsCount.textContent = String(sourceWarnings.length);
+  warningsBtn.classList.toggle("has-warnings", sourceWarnings.length > 0);
+  warningsPanel.innerHTML = sourceWarnings.length ? sourceWarnings.map((warning, index) => (
+    `<button class="warning-item" type="button" data-warning-index="${index}"><strong>${escapeHtml(documents[warning.fileIndex].name)} · ${escapeHtml(warning.key || "Без ключа")} · строка ${warning.line}</strong>${escapeHtml(warning.message)}</button>`
+  )).join("") : "<p>Предупреждений нет.</p>";
+}
+
 function renderCurrentNotification() {
   const section = parsedNotifications[activeNotificationIndex];
 
@@ -2925,10 +3036,12 @@ function renderCurrentNotification() {
 }
 
 function convert() {
+  syncActiveSourceDocument();
   parsedNotifications = parseNotifications(sourceText.value);
   activeNotificationIndex = 0;
   renderKeyTabs();
   renderCurrentNotification();
+  renderWarnings();
 }
 
 function activeVersion() {
@@ -3091,6 +3204,35 @@ keyTabs.addEventListener("click", (event) => {
   activeNotificationIndex = Number(button.dataset.keyIndex);
   renderKeyTabs();
   renderCurrentNotification();
+});
+
+warningsBtn.addEventListener("click", () => {
+  warningsPanel.hidden = !warningsPanel.hidden;
+  warningsBtn.setAttribute("aria-expanded", String(!warningsPanel.hidden));
+});
+warningsPanel.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-warning-index]");
+  if (!target) return;
+  const warning = sourceWarnings[Number(target.dataset.warningIndex)];
+  if (!warning) return;
+  if (sourceDocuments.length && warning.fileIndex !== activeSourceDocumentIndex) activateSourceDocument(warning.fileIndex);
+  const keyIndex = parsedNotifications.findIndex((section, index) => (
+    section.key === warning.key &&
+    (!warning.language || section.language === warning.language) &&
+    (warning.keyOccurrence < 0 || parsedNotifications.slice(0, index).filter((item) => item.key === warning.key).length === warning.keyOccurrence)
+  ));
+  if (keyIndex >= 0) {
+    activeNotificationIndex = keyIndex;
+    renderKeyTabs();
+    renderCurrentNotification();
+  }
+  const lines = sourceText.value.split("\n");
+  const start = lines.slice(0, warning.line - 1).reduce((total, line) => total + line.length + 1, 0);
+  sourceText.focus();
+  sourceText.setSelectionRange(start, start + (lines[warning.line - 1] || "").length);
+  sourceText.scrollTop = Math.max(0, (warning.line - 4) * 16);
+  warningsPanel.hidden = true;
+  warningsBtn.setAttribute("aria-expanded", "false");
 });
 
 function activeNotification() {

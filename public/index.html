@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LOCform 3.8.74</title>
+  <title>LOCform 3.8.75</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <link rel="stylesheet" href="styles.css?v=3.8.74">
+  <link rel="stylesheet" href="styles.css?v=3.8.75">
 </head>
 <body>
   <div id="authGate" class="auth-backdrop" hidden>
@@ -27,7 +27,7 @@
         <div class="pane-head">
           <div>
             <div class="brand-row">
-              <h1>LOCform 3.8.74</h1>
+              <h1>LOCform 3.8.75</h1>
               <button id="guideBtn" class="guide-button" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Инструкция">?</button>
             </div>
             <span>Web, Mobile, Redesign, Redesign MB6R, Redesign MB3B</span>
@@ -61,7 +61,9 @@
           <div class="key-tabs" id="keyTabs" aria-label="Ключи">
             <span class="key-empty">Ключи появятся после преобразования</span>
           </div>
+          <button id="warningsBtn" class="warnings-toggle" type="button" aria-expanded="false" aria-controls="warningsPanel">Предупреждения <span id="warningsCount">0</span></button>
           <button id="copyKeyBtn" class="key-copy" type="button" disabled>Скопировать ключ</button>
+          <div id="warningsPanel" class="warnings-panel" hidden></div>
         </div>
 
         <div class="tabs" role="tablist" aria-label="Версии HTML">
@@ -313,6 +315,6 @@ Old version
     </section>
   </div>
 
-  <script src="app.js?v=3.8.74"></script>
+  <script src="app.js?v=3.8.75"></script>
 </body>
 </html>
